@@ -39,8 +39,9 @@ func spaceSend(req Request) {
 	
 	// Call the write function of the TupleSpace
 	var ok bool
-	err = rpcClient.Call("TupleSpace.Write", tuple, &ok)
+	err = rpcClient.Call("TupleSpace.Write", *tuple, &ok)
 	checkErr(err)
+	
 	// Call done
 	fmt.Println("Everything ok?", ok)
 }

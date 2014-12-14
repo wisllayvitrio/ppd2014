@@ -14,15 +14,14 @@ func NewTuple(args ...interface{}) (*Tuple, error) {
 	tuple := new(Tuple)
 	for _, arg := range args {
 		data, err := encode.EncodeBytes(arg)
-
+		
 		if err != nil {
 			return nil, errors.New("Error while encoding arguments")
 		}
-
+		
 		tuple.Args = append(tuple.Args, data)
 	}
-    
-    fmt.Println(args, tuple)
+	
 	return tuple, nil
 }
 
