@@ -6,6 +6,7 @@ import (
 )
 
 type Stub struct {
+	mid middleware.Middleware
 }
 
 // Test function sum
