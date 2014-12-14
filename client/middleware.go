@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/rpc"
 	"github.com/wisllayvitrio/ppd2014/space"
-	"github.com/wisllayvitrio/ppd2014/encode"
 )
 
 func checkErr(err error) {
@@ -40,8 +39,9 @@ func spaceSend(req Request) {
 	
 	// Call the write function of the TupleSpace
 	var ok bool
-	err = rpcClient.Call("TupleSpace.Write", tuple, &ok)
+	err = rpcClient.Call("TupleSpace.Write", *tuple, &ok)
 	checkErr(err)
+	
 	// Call done
 	fmt.Println("Everything ok?", ok)
 }
@@ -53,7 +53,7 @@ type Stub struct {
 func (s *Stub) Sum(a,b int) (int, error) {
 	// Create Request
 	args := []interface{}{interface{}(a), interface{}(b)}
-	req := Request{"testServ", "Sum", 666, args}
+	req := Request{"testServ", "Sum", "666", args}
 	
 	// Send to tuple space
 	spaceSend(req)
@@ -62,5 +62,5 @@ func (s *Stub) Sum(a,b int) (int, error) {
 	// TODO
 	
 	// Return response
-	return 0
+	return 0, nil
 }
