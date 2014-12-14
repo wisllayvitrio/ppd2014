@@ -22,13 +22,13 @@ func Hash(data []byte) string {
 	return base64.StdEncoding.EncodeToString(hash[:])
 }
 
-func (ts *TupleSpace) Write(tuple entry.Entry, ok *bool) error {
+func (ts *TupleSpace) Write(tuple Entry, ok *bool) error {
 	fmt.Println("TupleSpace.Write Called!")
 	fmt.Println("Tuple provided:", tuple)
 	
 	fmt.Println("Hash of all the entry fields:")
 	for i, v := range tuple {
-		fmt.Println(i, ":", entry.Hash(v))
+		fmt.Println(i, ":", Hash(v))
 	}
 	fmt.Println()
 	

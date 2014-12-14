@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
+	"github.com/wisllayvitrio/ppd2014/server"
 )
 
 func main() {
-	fmt.Println("NOT!")
+	// TODO
 }
