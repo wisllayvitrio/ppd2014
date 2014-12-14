@@ -1,12 +1,13 @@
 package space 
 
 import (
+	"fmt"
 	"errors"
 	"github.com/wisllayvitrio/ppd2014/encode"
 )
 
 type Tuple struct {
-	args [][]byte
+	Args [][]byte
 }
 
 func NewTuple(args ...interface{}) (*Tuple, error) {
@@ -18,14 +19,15 @@ func NewTuple(args ...interface{}) (*Tuple, error) {
 			return nil, errors.New("Error while encoding arguments")
 		}
 
-		tuple.args = append(tuple.args, data)
+		tuple.Args = append(tuple.Args, data)
 	}
-
+    
+    fmt.Println(args, tuple)
 	return tuple, nil
 }
 
 func (t* Tuple) Get(i int, ptr interface{}) error {
-	err := encode.DecodeBytes(t.args[i], ptr)
+	err := encode.DecodeBytes(t.Args[i], ptr)
 	if err != nil {
 		return errors.New("Error while decoding tuple argument")
 	}
@@ -34,5 +36,5 @@ func (t* Tuple) Get(i int, ptr interface{}) error {
 }
 
 func (t* Tuple) Size() int {
-	return len(t.args)
+	return len(t.Args)
 }

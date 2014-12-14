@@ -1,10 +1,10 @@
 package main
 
 import (
-	"os"
 	"fmt"
 	"net"
 	"net/rpc"
+	"runtime/debug"
 	"github.com/wisllayvitrio/ppd2014/space"
 )
 
@@ -19,7 +19,7 @@ func main() {
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		fmt.Println("ERROR -", err)
-		os.Exit(1)
+		debug.PrintStack()
 	}
 	
 	// Accept and handle connections
