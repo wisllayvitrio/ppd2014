@@ -11,7 +11,7 @@ const tupleIndexDuration time.Duration = 1 * time.Minute
 const waitIndexDuration time.Duration = 1 * time.Minute
 
 type TupleSpace struct{
-	tupleIndex index.Index //armazena a tupla que esta relacionada a cada indice
+	tupleIndex *index.Index //armazena a tupla que esta relacionada a cada indice
 	searchTable [maxTupleSize]searchIndex
 }
 
@@ -34,6 +34,17 @@ func makeSearchIndex(numAttributes int) searchIndex {
 	}
 
 	return search
+}
+
+func NewTupleSpace() *TupleSpace {
+	space := new(TupleSpace)
+	space.tupleIndex = index.NewIndex(tupleIndexDuration)
+
+	for i := 1; i < maxTupleSize; i++ {
+		space.searchTable[i] = makeSearchIndex(i)
+	}
+
+	return space
 }
 
 type Request struct{
