@@ -71,7 +71,7 @@ func (space *TupleSpace) Read(template Request, tuple *Tuple) error {
 	ret := space.searchTuple(template.Data, searchSpace, true)
 
 	if ret != nil {
-		tuple = ret
+		*tuple = *ret
 		return nil
 	}
 
@@ -94,7 +94,7 @@ func (space *TupleSpace) Take(template Request, tuple *Tuple) error {
 	ret := space.searchTuple(template.Data, searchSpace, true)
 
 	if ret != nil {
-		tuple = ret
+		*tuple = *ret
 		return nil
 	}
 

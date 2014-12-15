@@ -35,19 +35,22 @@ func (c *Calculator) WorkDefault() error {
 }
 
 func (c *Calculator) Work(waitTimeout string, replyLeasing string) error {
-	err := c.mid.SetReadTimeout(waitTimeout)
-	if err != nil {
-		return err
-	}
+	// TODO: This infinite loop is a test!
+	for {
+		err := c.mid.SetReadTimeout(waitTimeout)
+		if err != nil {
+			return err
+		}
 	
-	err = c.mid.SetWriteLeasing(replyLeasing)
-	if err != nil {
-		return err
-	}
+		err = c.mid.SetWriteLeasing(replyLeasing)
+		if err != nil {
+			return err
+		}
 	
-	err = c.mid.Serve(c)
-	if err != nil {
-		return err
+		err = c.mid.Serve(c)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
