@@ -26,8 +26,8 @@ func (s *Stub) Sum(a,b int) (int, error) {
 	args := []interface{}{interface{}(a), interface{}(b)}
 	req := middleware.Request{"testServ", "Sum", "666", args}
 	fmt.Println("DEBUG: Middleware Request:", req)
-	// Set lease
-	s.mid.SetWriteLease("10s")
+	// Set leasing
+	s.mid.SetWriteLeasing("10s")
 	// Send to tuple space
 	err := s.mid.SendRequest(req)
 	if err != nil {

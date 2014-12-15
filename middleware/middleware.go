@@ -10,7 +10,7 @@ import (
 )
 
 const DefaultReadTimeout string = "300ms"
-const DefaultWriteLease string = "1s"
+const DefaultWriteLeasing string = "1s"
 
 type Request struct {
 	// Demux header
@@ -29,23 +29,23 @@ type Response struct {
 type Middleware struct {
 	spaceAddr string
 	readTimeout time.Duration
-	writeLease time.Duration
+	writeLeasing time.Duration
 }
 
 // Constructors
 func NewMiddlewareDefault(address string) (*Middleware, error) {
-	return NewMiddleware(address, DefaultReadTimeout, DefaultWriteLease)
+	return NewMiddleware(address, DefaultReadTimeout, DefaultWriteLeasing)
 }
 
-func NewMiddleware(address string, timeout string, lease string) (*Middleware, error) {
+func NewMiddleware(address string, timeout string, leasing string) (*Middleware, error) {
 	m := new(Middleware)
 	// This is not checking the address (net.Dial calls will check that)
 	m.spaceAddr = address
 	
 	// Set the read timeout configuration (used when reading from TupleSpace)
 	m.SetReadTimeout(timeout)
-	// Set the write lease configuration (used when writing to the TupleSpace)
-	m.SetWriteLease(lease)
+	// Set the write leasing configuration (used when writing to the TupleSpace)
+	m.SetWriteLeasing(leasing)
 	
 	return m, nil
 }
@@ -57,18 +57,16 @@ func (m *Middleware) SetReadTimeout(timeout string) error {
 		return err
 	}
 	m.readTimeout = dur
-	fmt.Println("DEBUG: ReadTimeout configured:", dur)
 	return nil
 }
 
-// Function to change the write lease configuration
-func (m *Middleware) SetWriteLease(lease string) error {
-	dur, err := time.ParseDuration(lease)
+// Function to change the write leasing configuration
+func (m *Middleware) SetWriteLeasing(leasing string) error {
+	dur, err := time.ParseDuration(leasing)
 	if err != nil {
 		return err
 	}
-	m.writeLease = dur
-	fmt.Println("DEBUG: WriteLease configured:", dur)
+	m.writeLeasing = dur
 	return nil
 }
 
@@ -86,7 +84,7 @@ func (m *Middleware) SendRequest(req Request) error {
 	}
 	
 	// Talk to the TupleSpace
-	err = m.communicate("TupleSpace.Write", m.writeLease, *tuple, dummyTuple)
+	err = m.communicate("TupleSpace.Write", m.writeLeasing, *tuple, dummyTuple)
 	if err != nil {
 		return err
 	}
@@ -106,7 +104,7 @@ func (m *Middleware) SendResponse(res Response) error {
 		return err
 	}
 	
-	err = m.communicate("TupleSpace.Write", m.writeLease, *tuple, dummyTuple)
+	err = m.communicate("TupleSpace.Write", m.writeLeasing, *tuple, dummyTuple)
 	if err != nil {
 		return err
 	}
@@ -184,6 +182,25 @@ func (m *Middleware) ReceiveRequest(serverName string) (*Request, error) {
 	return req, nil
 }
 
+func (m *Middleware) communicate(call string, t time.Duration, req space.Tuple, res *space.Tuple) error {
+	// Create request
+	message := space.Request{req, t}
+
+	// Dial the RPC server
+	rpcClient, err := rpc.Dial("tcp", m.spaceAddr)
+	if err != nil {
+		return err
+	}
+	fmt.Println("DEBUG: Communicate", call, "- time:", t, "- tuple:", req)
+	// Call the write function of the TupleSpace
+	err = rpcClient.Call(call, message, res)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Get a request and call the worker function to execute it
 func (m *Middleware) Serve(obj interface{}, serviceName string) error {
 	req, err := m.ReceiveRequest(serviceName)
@@ -202,25 +219,6 @@ func (m *Middleware) Serve(obj interface{}, serviceName string) error {
 		return err
 	}
 	
-	return nil
-}
-
-func (m *Middleware) communicate(call string, t time.Duration, req space.Tuple, res *space.Tuple) error {
-	// Create request
-	message := space.Request{req, t}
-
-	// Dial the RPC server
-	rpcClient, err := rpc.Dial("tcp", m.spaceAddr)
-	if err != nil {
-		return err
-	}
-
-	// Call the write function of the TupleSpace
-	err = rpcClient.Call(call, message, res)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 

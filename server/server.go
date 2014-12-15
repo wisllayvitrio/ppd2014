@@ -9,9 +9,21 @@ type Service struct {
 	mid middleware.Middleware
 }
 
+func NewService(name string, spaceAddr string) (*Service, error) {
+	s := new(Service)
+	ptr, err := middleware.NewMiddlewareDefault(spaceAddr)
+	if err != nil {
+		return nil, err
+	}
+	
+	s.name = name
+	s.mid = *ptr
+	return s, nil
+}
+
 // Work once to a random stranger (for free)
 func (s *Service) WorkDefault() error {
-	err = mid.Serve(s, s.name)
+	err := s.mid.Serve(s, s.name)
 	if err != nil {
 		return err
 	}
@@ -19,12 +31,12 @@ func (s *Service) WorkDefault() error {
 }
 
 func (s *Service) Work(waitTimeout string) error {
-	err := mid.SetReadTimeout(waitTimeout)
+	err := s.mid.SetReadTimeout(waitTimeout)
 	if err != nil {
 		return err
 	}
 	
-	err = mid.Serve(s, s.name)
+	err = s.mid.Serve(s, s.name)
 	if err != nil {
 		return err
 	}
