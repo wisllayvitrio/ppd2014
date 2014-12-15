@@ -37,7 +37,7 @@ func (s *Stub) Sum(a,b int) (int, error) {
 	}
 	
 	// Set timeout
-	s.mid.SetReadTimeout("1s")
+	s.mid.SetReadTimeout("10s")
 	// Wait for response
 	res, err := s.mid.ReceiveResponse(id)
 	if err != nil {

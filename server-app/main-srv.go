@@ -14,7 +14,7 @@ func main() {
 	}
 	
 	//err = srv.WorkDefault()
-	err = calc.Work("1m")
+	err = calc.Work("1m", "30s")
 	if err != nil {
 		fmt.Println("ERROR -", err)
 		debug.PrintStack()

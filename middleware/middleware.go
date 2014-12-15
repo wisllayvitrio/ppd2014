@@ -9,13 +9,13 @@ import (
 	"github.com/wisllayvitrio/ppd2014/space"
 )
 
-const DefaultReadTimeout string = "300ms"
-const DefaultWriteLeasing string = "1s"
+const DefaultReadTimeout string = "10s"
+const DefaultWriteLeasing string = "30s"
 
 type Service interface {
 	Name() string
 	WorkDefault() error
-	Work(timeout string) error
+	Work(timeout string, replyLeasing string) error
 }
 
 type Request struct {

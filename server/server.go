@@ -34,8 +34,13 @@ func (c *Calculator) WorkDefault() error {
 	return nil
 }
 
-func (c *Calculator) Work(waitTimeout string) error {
+func (c *Calculator) Work(waitTimeout string, replyLeasing string) error {
 	err := c.mid.SetReadTimeout(waitTimeout)
+	if err != nil {
+		return err
+	}
+	
+	err = c.mid.SetWriteLeasing(replyLeasing)
 	if err != nil {
 		return err
 	}
