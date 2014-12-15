@@ -10,7 +10,7 @@ import (
 
 func main() {
 	addr := ":8666"
-	space := new(space.TupleSpace)
+	space := space.NewTupleSpace()
 	
 	// Register in the RPC default server
 	rpc.Register(space)
