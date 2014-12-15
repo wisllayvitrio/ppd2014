@@ -11,7 +11,7 @@ type Stub struct {
 
 func NewStub(spaceAddr string) (*Stub, error) {
 	s := new(Stub)
-	ptr, err := middleware.NewMiddleware(spaceAddr)
+	ptr, err := middleware.NewMiddlewareDefault(spaceAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -25,27 +25,29 @@ func (s *Stub) Sum(a,b int) (int, error) {
 	// Create Request
 	args := []interface{}{interface{}(a), interface{}(b)}
 	req := middleware.Request{"testServ", "Sum", "666", args}
-	
+	fmt.Println("DEBUG: Middleware Request:", req)
 	// Set lease
-	mid.SetWriteLease("10s")
+	s.mid.SetWriteLease("10s")
 	// Send to tuple space
-	err := mid.SendRequest(req)
+	err := s.mid.SendRequest(req)
 	if err != nil {
 		return -1, err
 	}
 	
 	// Set timeout
-	mid.SetReadTimeout("1s")
+	s.mid.SetReadTimeout("1s")
 	// Wait for response
-	res, err := mid.ReceiveResponse("666")
+	res, err := s.mid.ReceiveResponse("666")
 	if err != nil {
 		return -1, err
 	}
-	
+	fmt.Println("DEBUG: Middleware Response:", res)
 	// This function understands middleware.Response
 	var values []interface{}
 	values = res.Args
-	result := int(values[0])
+	result := int(values[0].(int))
+	
+	fmt.Println("DEBUG: a+b:", result)
 	
 	// Return response
 	return result, err

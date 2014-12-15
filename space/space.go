@@ -10,6 +10,14 @@ const maxTupleSize int = 10
 const tupleIndexDuration time.Duration = 1 * time.Minute
 const waitIndexDuration time.Duration = 1 * time.Minute
 
+type Nil struct {
+	Dummy bool
+}
+
+func NilValue() interface{} {
+	return Nil{false}
+}
+
 type TupleSpace struct{
 	tupleIndex index.Index //armazena a tupla que esta relacionada a cada indice
 	searchTable [maxTupleSize]searchIndex
@@ -38,26 +46,58 @@ func makeSearchIndex(numAttributes int) searchIndex {
 
 type Request struct{
 	Data Tuple
-	Timeout int64
+	Timeout time.Duration
 }
 
-func (ts *TupleSpace) Write(tuple Request, dumb *interface{}) error {
+func (ts *TupleSpace) Write(tuple Request, dummy *Tuple) error {
 	fmt.Println("TupleSpace.Write Called!")
 	fmt.Println("Tuple provided:", tuple)
+	fmt.Println()
+	
+	// dummy return
+	dummy, err := NewTuple(4, 2)
+	if err != nil {
+		fmt.Println("dummy err:", err)
+	}
 
 	return nil
 }
 
 func (ts *TupleSpace) Read(template Request, tuple *Tuple) error {
 	fmt.Println("TupleSpace.Read Called!")
-	fmt.Println("Template provided", tuple)
+	fmt.Println("Template provided:", template)
+	fmt.Println("Return tuple:", tuple)
+	fmt.Println()
 
 	return nil
 }
 
 func (ts *TupleSpace) Take(template Request, tuple *Tuple) error {
 	fmt.Println("TupleSpace.Take Called!")
-	fmt.Println("Template provided", tuple)
-
+	fmt.Println("Template provided:", template)
+	fmt.Println("Return tuple:", tuple)
+	//fmt.Println()
+	
+	// Test return
+	res := new(Tuple)
+	
+	var name string
+	var sum int
+	args := make([]interface{}, 0)
+	 
+	template.Data.Get(0, &name)
+	template.Data.Get(1, &sum)
+	args = append(args, sum)
+	
+	res, err := NewTuple(name, args)
+	if err != nil {
+		fmt.Println("SPACE-ERROR:", err)
+	}
+	
+	*tuple = *res
+	fmt.Println("Template (human-readable):", name, sum)
+	fmt.Println("New tuple:", tuple)
+	fmt.Println()
+	
 	return nil
 }

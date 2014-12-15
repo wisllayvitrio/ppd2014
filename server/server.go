@@ -11,7 +11,7 @@ type Service struct {
 }
 
 // Work once to a random stranger (for free)
-func (s *Service) Work() error {
+func (s *Service) WorkDefault() error {
 	err = mid.Serve(s, s.name)
 	if err != nil {
 		return err

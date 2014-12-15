@@ -1,10 +1,11 @@
 package middleware
 
 import (
-	"os"
 	"fmt"
-	"net"
 	"time"
+	"errors"
+	"reflect"
+	"net/rpc"
 	"github.com/wisllayvitrio/ppd2014/space"
 )
 
@@ -32,36 +33,19 @@ type Middleware struct {
 }
 
 // Constructors
-func NewMiddleware(address string) (*Middleware, error) {
+func NewMiddlewareDefault(address string) (*Middleware, error) {
 	return NewMiddleware(address, DefaultReadTimeout, DefaultWriteLease)
 }
 
 func NewMiddleware(address string, timeout string, lease string) (*Middleware, error) {
 	m := new(Middleware)
-	
-	// Set the TupleSpace addr (check before)
-	addrs, err := net.LookupHost(address)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("DEBUG: TupleSpace has these addresses:", addrs)
-	m.spaceAddr = addrs[0]
+	// This is not checking the address (net.Dial calls will check that)
+	m.spaceAddr = address
 	
 	// Set the read timeout configuration (used when reading from TupleSpace)
-	dur, err := time.ParseDuration(timeout)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("DEBUG: ReadTimeout configured:", dur)
-	m.readTimeout = dur
-	
+	m.SetReadTimeout(timeout)
 	// Set the write lease configuration (used when writing to the TupleSpace)
-	dur, err = time.ParseDuration(lease)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("DEBUG: WriteLease configured:", dur)
-	m.writeLease = dur
+	m.SetWriteLease(lease)
 	
 	return m, nil
 }
@@ -70,9 +54,10 @@ func NewMiddleware(address string, timeout string, lease string) (*Middleware, e
 func (m *Middleware) SetReadTimeout(timeout string) error {
 	dur, err := time.ParseDuration(timeout)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	m.readTimeout = dur
+	fmt.Println("DEBUG: ReadTimeout configured:", dur)
 	return nil
 }
 
@@ -80,9 +65,10 @@ func (m *Middleware) SetReadTimeout(timeout string) error {
 func (m *Middleware) SetWriteLease(lease string) error {
 	dur, err := time.ParseDuration(lease)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	m.writeLease = dur
+	fmt.Println("DEBUG: WriteLease configured:", dur)
 	return nil
 }
 
@@ -94,8 +80,13 @@ func (m *Middleware) SendRequest(req Request) error {
 		return err
 	}
 	
+	dummyTuple, err := space.NewTuple()
+	if err != nil {
+		return err
+	}
+	
 	// Talk to the TupleSpace
-	err = communicate("TupleSpace.Write", m.writeLease, tuple, nil)
+	err = m.communicate("TupleSpace.Write", m.writeLease, *tuple, dummyTuple)
 	if err != nil {
 		return err
 	}
@@ -110,7 +101,12 @@ func (m *Middleware) SendResponse(res Response) error {
 		return err
 	}
 	
-	err = communicate("TupleSpace.Write", m.writeLease, tuple, nil)
+	dummyTuple, err := space.NewTuple()
+	if err != nil {
+		return err
+	}
+	
+	err = m.communicate("TupleSpace.Write", m.writeLease, *tuple, dummyTuple)
 	if err != nil {
 		return err
 	}
@@ -120,31 +116,67 @@ func (m *Middleware) SendResponse(res Response) error {
 
 // Read from TupleSpace
 func (m *Middleware) ReceiveResponse(id string) (*Response, error) {
-	tuple, err := space.NewTuple(id, nil)
+	tuple, err := space.NewTuple(id, space.NilValue())
 	if err != nil {
 		return nil, err
 	}
 	
+	// Create response tuple to put the result on it
+	resTuple, err := space.NewTuple()
+	if err != nil {
+		return nil, err
+	}
+
+	// Send tuple to TupleSpace
+	err = m.communicate("TupleSpace.Take", m.readTimeout, *tuple, resTuple)
+	if err != nil {
+		return nil, err
+	}
+
 	// Create response struct
 	res := new(Response)
-	
-	err = communicate("TupleSpace.Take", m.readTimeout, tuple, res)
+	err = resTuple.Get(0, &res.ID)
 	if err != nil {
 		return nil, err
 	}
-	
+	err = resTuple.Get(1, &res.Args)
+	if err != nil {
+		return nil, err
+	}
+
 	return res, nil
 }
 
 func (m *Middleware) ReceiveRequest(serverName string) (*Request, error) {
-	tuple, err := space.NewTuple(serverName, nil, nil, nil)
+	tuple, err := space.NewTuple(serverName, space.NilValue(), space.NilValue(), space.NilValue())
+	if err != nil {
+		return nil, err
+	}
+	
+	reqTuple, err := space.NewTuple()
+	if err != nil {
+		return nil, err
+	}
+	
+	err = m.communicate("TupleSpace.Take", m.readTimeout, *tuple, reqTuple)
 	if err != nil {
 		return nil, err
 	}
 	
 	req := new(Request)
-	
-	err = communicate("TupleSpace.Take", m.readTimeout, tuple, req)
+	err = reqTuple.Get(0, &req.ServerName)
+	if err != nil {
+		return nil, err
+	}
+	err = reqTuple.Get(1, &req.FuncName)
+	if err != nil {
+		return nil, err
+	}
+	err = reqTuple.Get(2, &req.ResponseID)
+	if err != nil {
+		return nil, err
+	}
+	err = reqTuple.Get(3, &req.Args)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +186,7 @@ func (m *Middleware) ReceiveRequest(serverName string) (*Request, error) {
 
 // Get a request and call the worker function to execute it
 func (m *Middleware) Serve(obj interface{}, serviceName string) error {
-	req, err := ReceiveRequest(serviceName)
+	req, err := m.ReceiveRequest(serviceName)
 	if err != nil {
 		return err
 	}
@@ -165,7 +197,7 @@ func (m *Middleware) Serve(obj interface{}, serviceName string) error {
 	}
 	
 	res := Response{req.ResponseID, results}
-	err = SendResponse(res)
+	err = m.SendResponse(res)
 	if err != nil {
 		return err
 	}
@@ -173,22 +205,22 @@ func (m *Middleware) Serve(obj interface{}, serviceName string) error {
 	return nil
 }
 
-func communicate(call string, t time.Duration, req space.Tuple, res *space.Tuple) error {
+func (m *Middleware) communicate(call string, t time.Duration, req space.Tuple, res *space.Tuple) error {
 	// Create request
 	message := space.Request{req, t}
-	
+
 	// Dial the RPC server
 	rpcClient, err := rpc.Dial("tcp", m.spaceAddr)
 	if err != nil {
 		return err
 	}
-	
+
 	// Call the write function of the TupleSpace
 	err = rpcClient.Call(call, message, res)
 	if err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 

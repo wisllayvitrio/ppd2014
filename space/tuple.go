@@ -1,6 +1,7 @@
 package space 
 
 import (
+	"fmt"
 	"errors"
 	"github.com/wisllayvitrio/ppd2014/encode"
 )
@@ -15,7 +16,7 @@ func NewTuple(args ...interface{}) (*Tuple, error) {
 		data, err := encode.EncodeBytes(arg)
 		
 		if err != nil {
-			return nil, errors.New("Error while encoding arguments")
+			return nil, errors.New(fmt.Sprintln("Error while encoding arguments -", err))
 		}
 		
 		tuple.Args = append(tuple.Args, data)
@@ -27,9 +28,9 @@ func NewTuple(args ...interface{}) (*Tuple, error) {
 func (t* Tuple) Get(i int, ptr interface{}) error {
 	err := encode.DecodeBytes(t.Args[i], ptr)
 	if err != nil {
-		return errors.New("Error while decoding tuple argument")
+		return errors.New(fmt.Sprintln("Error while decoding tuple argument -", err))
 	}
-
+	
 	return nil
 }
 

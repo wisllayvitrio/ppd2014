@@ -7,9 +7,13 @@ import (
 )
 
 func main() {
-	stub := new(client.Stub)
-	res, err := stub.Sum(1, 1)
+	stub, err := client.NewStub("localhost:8666")
+	if err != nil {
+		fmt.Println("ERROR -", err)
+		debug.PrintStack()
+	}
 	
+	res, err := stub.Sum(1, 1)
 	if err != nil {
 		fmt.Println("ERROR -", err)
 		debug.PrintStack()
