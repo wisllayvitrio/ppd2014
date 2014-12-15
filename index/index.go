@@ -71,36 +71,22 @@ func (i *Index) Put(key string, value interface{}, duration time.Duration) {
 	i.index[key] = newList
 }
 
-func (i *Index) Get(key string) []interface {} {
-	i.mutex.RLock()
-	defer i.mutex.RUnlock()
+func (i *Index) Get(key string, remove bool) []interface {} {
+	if remove {
+		i.mutex.Lock()
+		defer i.mutex.Unlock()
+	} else {
+		i.mutex.RLock()
+		defer i.mutex.RUnlock()
+	}
 
 	time := time.Now()
 
 	if list, exists := i.index[key]; exists {
-		ret := make([]interface{}, 0)
-
-		for _, value := range list {
-			if value.expireTime.Before(time) { 
-				ret = append(ret, value.data)
-			}
+		if remove {
+			delete(i.index, key)
 		}
 
-		return ret
-	} else {
-		return nil
-	}
-}
-
-func (i *Index) Take(key string) []interface{} {
-	i.mutex.Lock()
-	defer i.mutex.Unlock()
-
-	time := time.Now()
-
-	if list, exists := i.index[key]; exists {
-		delete(i.index, key)
-		
 		ret := make([]interface{}, 0)
 
 		for _, value := range list {

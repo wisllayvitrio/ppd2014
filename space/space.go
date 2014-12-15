@@ -1,7 +1,6 @@
 package space
 
 import (
-	"fmt"
 	"time"
 	"sync"
 	"errors"
@@ -40,13 +39,11 @@ type Request struct{
 }
 
 func (space *TupleSpace) Write(tuple Request, dummy *Tuple) error {
-	fmt.Println("TupleSpace.Write Called!")
-	fmt.Println("Tuple provided:", tuple)
 	space.mutex.Lock()
 	defer space.mutex.Unlock()
 
 	searchSpace := space.searchTable[tuple.Data.Size()]
-	
+
 	//Procurar caras esperando
 	//Se tiver alguem verifica o que ele espera
 	wasTaken := space.waitList.sendNewTuple(tuple.Data)
@@ -62,7 +59,6 @@ func (space *TupleSpace) Write(tuple Request, dummy *Tuple) error {
 		hashcode := encode.Hash(arg)
 		searchSpace.tupleIndex[i].Put(hashcode, tupleID, tuple.Leasing)
 	}
-
 	//Armazenando no espaço de tuplas
 	space.tupleIndex.Put(tupleID, tuple.Data, tuple.Leasing)
 
@@ -70,32 +66,15 @@ func (space *TupleSpace) Write(tuple Request, dummy *Tuple) error {
 }
 
 func (space *TupleSpace) Read(template Request, tuple *Tuple) error {
-	fmt.Println("TupleSpace.Read Called!")
-	fmt.Println("Template provided:", template)
-
-	space.mutex.RLock()
-	defer space.mutex.RUnlock()
-
 	searchSpace := space.searchTable[template.Data.Size()]
 
-	var hashList []string = searchHashes(template.Data, searchSpace)
+	ret := space.searchTuple(template.Data, searchSpace, true)
 
-	//Procura por possiveis valores
-	for _, hash := range hashList {
-		tuples := space.tupleIndex.Get(hash)
-
-		if tuples == nil {
-			continue
-		}
-
-		for _, value := range tuples {
-			if ret, ok := value.(Tuple); ok {
-				tuple = &ret
-				return nil
-			}
-		}
+	if ret != nil {
+		tuple = ret
+		return nil
 	}
-	
+
 	//Cria o estado de espera
 	waitState := NewWaitState(template.Leasing, template.Data, make(chan Tuple, 1), false)
 	space.waitList.Add(waitState)
@@ -110,34 +89,15 @@ func (space *TupleSpace) Read(template Request, tuple *Tuple) error {
 }
 
 func (space *TupleSpace) Take(template Request, tuple *Tuple) error {
-	fmt.Println("TupleSpace.Take Called!")
-	fmt.Println("Template provided:", template)
-	fmt.Println("Return tuple:", tuple)
-	//fmt.Println()
-	
-	space.mutex.RLock()
-	defer space.mutex.RUnlock()
-
 	searchSpace := space.searchTable[template.Data.Size()]
-
-	var hashList []string = searchHashes(template.Data, searchSpace)
 	
-	//Procura por possiveis valores
-	for _, hash := range hashList {
-		tuples := space.tupleIndex.Take(hash)
+	ret := space.searchTuple(template.Data, searchSpace, true)
 
-		if tuples == nil {
-			continue
-		}
-
-		for _, value := range tuples {
-			if ret, ok := value.(Tuple); ok {
-				tuple = &ret
-				return nil
-			}
-		}
+	if ret != nil {
+		tuple = ret
+		return nil
 	}
-	
+
 	//Cria o estado de espera
 	waitState := NewWaitState(template.Leasing, template.Data, make(chan Tuple, 1), true)
 	space.waitList.Add(waitState)
@@ -187,7 +147,7 @@ func searchHashes(template Tuple, searchSpace *searchIndex) []string {
 		hashcode := encode.Hash(arg)
 
 		if hashcode != nilHashCode {
-			list := searchSpace.tupleIndex[i].Get(hashcode)
+			list := searchSpace.tupleIndex[i].Get(hashcode, false)
 
 			if len(hashList) == 0 {
 				hashList = toStringList(list)
@@ -198,4 +158,28 @@ func searchHashes(template Tuple, searchSpace *searchIndex) []string {
 	}
 
 	return hashList
+}
+
+func (space *TupleSpace) searchTuple(template Tuple, searchSpace *searchIndex, remove bool) *Tuple {
+	space.mutex.RLock()
+	defer space.mutex.RUnlock()
+
+	var hashList []string = searchHashes(template, searchSpace)
+	
+	//Procura por possiveis valores
+	for _, hash := range hashList {
+		tuples := space.tupleIndex.Get(hash, remove)
+
+		if tuples == nil {
+			continue
+		}
+
+		for _, value := range tuples {
+			if ret, ok := value.(Tuple); ok {
+				return &ret
+			}
+		}
+	}
+
+	return nil
 }
