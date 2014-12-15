@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 	"github.com/wisllayvitrio/ppd2014/middleware"
+	"code.google.com/p/go-uuid/uuid"
 )
 
 type Stub struct {
@@ -23,8 +24,9 @@ func NewStub(spaceAddr string) (*Stub, error) {
 // Test function sum
 func (s *Stub) Sum(a,b int) (int, error) {
 	// Create Request
+	id := uuid.NewRandom().String()
 	args := []interface{}{interface{}(a), interface{}(b)}
-	req := middleware.Request{"testServ", "Sum", "666", args}
+	req := middleware.Request{"testServ", "Sum", id, args}
 	fmt.Println("DEBUG: Middleware Request:", req)
 	// Set leasing
 	s.mid.SetWriteLeasing("10s")
@@ -37,7 +39,7 @@ func (s *Stub) Sum(a,b int) (int, error) {
 	// Set timeout
 	s.mid.SetReadTimeout("1s")
 	// Wait for response
-	res, err := s.mid.ReceiveResponse("666")
+	res, err := s.mid.ReceiveResponse(id)
 	if err != nil {
 		return -1, err
 	}

@@ -4,39 +4,43 @@ import (
 	"github.com/wisllayvitrio/ppd2014/middleware"
 )
 
-type Service struct {
+type Calculator struct {
 	name string
 	mid middleware.Middleware
 }
 
-func NewService(name string, spaceAddr string) (*Service, error) {
-	s := new(Service)
+func NewCalculator(name string, spaceAddr string) (*Calculator, error) {
+	c := new(Calculator)
 	ptr, err := middleware.NewMiddlewareDefault(spaceAddr)
 	if err != nil {
 		return nil, err
 	}
 	
-	s.name = name
-	s.mid = *ptr
-	return s, nil
+	c.name = name
+	c.mid = *ptr
+	return c, nil
+}
+
+func (c *Calculator) Name() string {
+	return c.name
 }
 
 // Work once to a random stranger (for free)
-func (s *Service) WorkDefault() error {
-	err := s.mid.Serve(s, s.name)
+func (c *Calculator) WorkDefault() error {
+	err := c.mid.Serve(c)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *Service) Work(waitTimeout string) error {
-	err := s.mid.SetReadTimeout(waitTimeout)
+func (c *Calculator) Work(waitTimeout string) error {
+	err := c.mid.SetReadTimeout(waitTimeout)
 	if err != nil {
 		return err
 	}
 	
-	err = s.mid.Serve(s, s.name)
+	err = c.mid.Serve(c)
 	if err != nil {
 		return err
 	}
@@ -44,6 +48,6 @@ func (s *Service) Work(waitTimeout string) error {
 }
 
 // Actual service function
-func (s *Service) Sum(a, b int) int {
+func (c *Calculator) Sum(a, b int) int {
 	return a + b
 }

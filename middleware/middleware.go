@@ -12,6 +12,12 @@ import (
 const DefaultReadTimeout string = "300ms"
 const DefaultWriteLeasing string = "1s"
 
+type Service interface {
+	Name() string
+	WorkDefault() error
+	Work(timeout string) error
+}
+
 type Request struct {
 	// Demux header
 	ServerName string
@@ -202,8 +208,8 @@ func (m *Middleware) communicate(call string, t time.Duration, req space.Tuple, 
 }
 
 // Get a request and call the worker function to execute it
-func (m *Middleware) Serve(obj interface{}, serviceName string) error {
-	req, err := m.ReceiveRequest(serviceName)
+func (m *Middleware) Serve(obj Service) error {
+	req, err := m.ReceiveRequest(obj.Name())
 	if err != nil {
 		return err
 	}

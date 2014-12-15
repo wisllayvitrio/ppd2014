@@ -7,14 +7,14 @@ import (
 )
 
 func main() {
-	srv, err := server.NewService("testServ", "localhost:8666")
+	calc, err := server.NewCalculator("testServ", "localhost:8666")
 	if err != nil {
 		fmt.Println("ERROR -", err)
 		debug.PrintStack()
 	}
 	
 	//err = srv.WorkDefault()
-	err = srv.Work("1m")
+	err = calc.Work("1m")
 	if err != nil {
 		fmt.Println("ERROR -", err)
 		debug.PrintStack()
