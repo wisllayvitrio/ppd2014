@@ -15,59 +15,11 @@ const tupleIndexDuration time.Duration = 1 * time.Minute
 const waitIndexDuration time.Duration = 1 * time.Minute
 var nilHashCode string = NilHash()
 
-type Nil struct {
-	Dummy bool
-}
-
-func NilValue() interface{} {
-	return Nil{false}
-}
-
-func NilHash() string {
-	data, _ := encode.EncodeBytes(NilValue())
-	return encode.Hash(data)
-}
-
 type TupleSpace struct {
 	mutex sync.RWMutex		//cotrola o acesso concorrente permitindo apenas leituras simultaneas
 	tupleIndex *index.Index //armazena a tupla que esta relacionada a cada indice
 	waitList *WaitList 		//armazena a lista de espera por tuplas (linear)
 	searchTable [maxTupleSize]*searchIndex
-}
-
-type searchIndex struct {
-	numAttributes int
-	tupleIndex []*index.Index
-}
-
-type WaitList struct {
-	list []waitState
-}
-
-type waitState struct {
-	expireTime time.Time
-	template Tuple
-	wait chan Tuple
-	isToTake bool 
-}
-
-func NewWaitList() *WaitList {
-	waitList := new(WaitList)
-	waitList.list = make([]waitState, 0)
-	return waitList
-}
-
-func NewSearchIndex(numAttributes int) *searchIndex {
-	search := &searchIndex{
-		numAttributes,
-		make([]*index.Index, numAttributes),
-	}
-
-	for i := 0; i < numAttributes; i++ {
-		search.tupleIndex[i] = index.NewIndex(tupleIndexDuration)
-	}
-
-	return search
 }
 
 func NewTupleSpace() *TupleSpace {
@@ -94,12 +46,18 @@ func (space *TupleSpace) Write(tuple Request, dummy *Tuple) error {
 	defer space.mutex.Unlock()
 
 	searchSpace := space.searchTable[tuple.Data.Size()]
-	tupleID := uuid.NewRandom().String()
-
+	
 	//Procurar caras esperando
 	//Se tiver alguem verifica o que ele espera
+	wasTaken := space.waitList.sendNewTuple(tuple.Data)
+
+	if wasTaken {
+		return nil
+	}
 
 	//Arrumandos os indeices de busca
+	tupleID := uuid.NewRandom().String()
+
 	for i, arg := range tuple.Data.Args {
 		hashcode := encode.Hash(arg)
 		searchSpace.tupleIndex[i].Put(hashcode, tupleID, tuple.Leasing)
@@ -139,17 +97,12 @@ func (space *TupleSpace) Read(template Request, tuple *Tuple) error {
 	}
 	
 	//Cria o estado de espera
-	waitChan := make(chan Tuple, 1)
-	wait := waitState{
-		time.Now().Add(template.Leasing),
-		template.Data,
-		waitChan,
-		false,
-	}
+	waitState := NewWaitState(template.Leasing, template.Data, make(chan Tuple, 1), false)
+	space.waitList.Add(waitState)
 
 	//Se nao encontrou espera pelo timeout
 	select {
-	case *tuple = <-waitChan:
+	case *tuple = <-waitState.wait:
 		return nil
 	case <-time.After(template.Leasing):
 		return errors.New("Data not found")
@@ -186,17 +139,12 @@ func (space *TupleSpace) Take(template Request, tuple *Tuple) error {
 	}
 	
 	//Cria o estado de espera
-	waitChan := make(chan Tuple, 1)
-	wait := waitState{
-		time.Now().Add(template.Leasing),
-		template.Data,
-		waitChan,
-		true,
-	}
+	waitState := NewWaitState(template.Leasing, template.Data, make(chan Tuple, 1), true)
+	space.waitList.Add(waitState)
 
 	//Se nao encontrou espera pelo timeout
 	select {
-	case *tuple = <-waitChan:
+	case *tuple = <-waitState.wait:
 		return nil
 	case <-time.After(template.Leasing):
 		return errors.New("Data not found")

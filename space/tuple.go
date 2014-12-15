@@ -37,3 +37,20 @@ func (t* Tuple) Get(i int, ptr interface{}) error {
 func (t* Tuple) Size() int {
 	return len(t.Args)
 }
+
+func (t *Tuple) Match(template Tuple) bool {
+	if t.Size() != template.Size() {
+		return false
+	}
+
+	for i, arg1 := range t.Args {
+		arg2 := template.Args[i]
+		hash1, hash2 := encode.Hash(arg1), encode.Hash(arg2)
+
+		if hash2 != NilHash() && hash1 != hash2 {
+			return false
+		}
+	}
+
+	return true
+}
