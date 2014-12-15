@@ -1,7 +1,6 @@
 package space 
 
 import (
-	"fmt"
 	"errors"
 	"github.com/wisllayvitrio/ppd2014/encode"
 )
