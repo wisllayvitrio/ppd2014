@@ -1,11 +1,13 @@
 package space
 
 import (
+	"sync"
 	"container/list"
 	"time"
 )
 
 type WaitList struct {
+	mutex sync.RWMutex
 	waitList *list.List
 }
 
@@ -32,10 +34,15 @@ func NewWaitList() *WaitList {
 }
 
 func (w *WaitList) Add(state WaitState) {
+	w.mutex.Lock()
 	w.waitList.PushBack(state)
+	defer w.mutex.Unlock()
 }
 
 func (w *WaitList) sendNewTuple(tuple Tuple) bool {
+	w.mutex.Lock()
+	defer w.mutex.Lock()
+
 	now := time.Now()
 	
 	for e := w.waitList.Front(); e != nil; {
