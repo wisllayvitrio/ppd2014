@@ -92,17 +92,26 @@ func (i *Index) Get(key string) []interface {} {
 	}
 }
 
-func (i *Index) Remove(key string, value interface{}) {
+func (i *Index) Take(key string) []interface{} {
 	i.mutex.Lock()
 	defer i.mutex.Unlock()
 
+	time := time.Now()
+
 	if list, exists := i.index[key]; exists {
-		for pos, val := range list {
-			if val.data == value {
-				i.index[key] = append(list[:pos], list[pos+1:]...)
-				break
+		delete(i.index, key)
+		
+		ret := make([]interface{}, 0)
+
+		for _, value := range list {
+			if value.expireTime.Before(time) { 
+				ret = append(ret, value.data)
 			}
 		}
+
+		return ret
+	} else {
+		return nil
 	}
 }
 
