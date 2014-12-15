@@ -90,7 +90,7 @@ func (i *Index) Get(key string, remove bool) []interface {} {
 		ret := make([]interface{}, 0)
 
 		for _, value := range list {
-			if value.expireTime.Before(time) { 
+			if value.expireTime.After(time) { 
 				ret = append(ret, value.data)
 			}
 		}
