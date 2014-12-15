@@ -35,8 +35,8 @@ func NewWaitList() *WaitList {
 
 func (w *WaitList) Add(state WaitState) {
 	w.mutex.Lock()
-	w.waitList.PushBack(state)
 	defer w.mutex.Unlock()
+	w.waitList.PushBack(state)
 }
 
 func (w *WaitList) sendNewTuple(tuple Tuple) bool {

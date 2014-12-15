@@ -1,7 +1,6 @@
 package client
 
 import (
-	"fmt"
 	"github.com/wisllayvitrio/ppd2014/middleware"
 	"code.google.com/p/go-uuid/uuid"
 )
@@ -27,7 +26,7 @@ func (s *Stub) Sum(a,b int) (int, error) {
 	id := uuid.NewRandom().String()
 	args := []interface{}{interface{}(a), interface{}(b)}
 	req := middleware.Request{"testServ", "Sum", id, args}
-	fmt.Println("DEBUG: Middleware Request:", req)
+	
 	// Set leasing
 	s.mid.SetWriteLeasing("10s")
 	// Send to tuple space
@@ -43,13 +42,11 @@ func (s *Stub) Sum(a,b int) (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	fmt.Println("DEBUG: Middleware Response:", res)
+	
 	// This function understands middleware.Response
 	var values []interface{}
 	values = res.Args
 	result := int(values[0].(int))
-	
-	fmt.Println("DEBUG: a+b:", result)
 	
 	// Return response
 	return result, err

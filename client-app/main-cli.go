@@ -15,9 +15,9 @@ func main() {
 	}
 	
 	for i := 0; ; i++ {
-		<-time.After(100 * time.Millisecond)
+		<-time.After(10 * time.Millisecond)
 	
-		res, err := stub.Sum(1, 1)
+		res, err := stub.Sum(i, i + 2)
 		if err != nil {
 			fmt.Println("ERROR -", err)
 			debug.PrintStack()

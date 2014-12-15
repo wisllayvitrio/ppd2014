@@ -33,6 +33,7 @@ type Response struct {
 }
 
 type Middleware struct {
+	connection *rpc.Client
 	spaceAddr string
 	readTimeout time.Duration
 	writeLeasing time.Duration
@@ -53,6 +54,13 @@ func NewMiddleware(address string, timeout string, leasing string) (*Middleware,
 	// Set the write leasing configuration (used when writing to the TupleSpace)
 	m.SetWriteLeasing(leasing)
 	
+	// Dial the RPC server
+	rpcClient, err := rpc.Dial("tcp", m.spaceAddr)
+	if err != nil {
+		return nil, err
+	}
+	m.connection = rpcClient
+
 	return m, nil
 }
 
@@ -191,15 +199,9 @@ func (m *Middleware) ReceiveRequest(serverName string) (*Request, error) {
 func (m *Middleware) communicate(call string, t time.Duration, req space.Tuple, res *space.Tuple) error {
 	// Create request
 	message := space.Request{req, t}
-
-	// Dial the RPC server
-	rpcClient, err := rpc.Dial("tcp", m.spaceAddr)
-	if err != nil {
-		return err
-	}
-	fmt.Println("DEBUG: Communicate", call, "- time:", t, "- tuple:", req)
+	
 	// Call the write function of the TupleSpace
-	err = rpcClient.Call(call, message, res)
+	err := m.connection.Call(call, message, res)
 	if err != nil {
 		return err
 	}
