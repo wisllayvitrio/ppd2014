@@ -14,8 +14,7 @@ const DefaultWriteLeasing string = "30s"
 
 type Service interface {
 	Name() string
-	WorkDefault() error
-	Work(timeout string, replyLeasing string) error
+	Work() error
 }
 
 type Request struct {
@@ -44,7 +43,7 @@ func NewMiddlewareDefault(address string) (*Middleware, error) {
 	return NewMiddleware(address, DefaultReadTimeout, DefaultWriteLeasing)
 }
 
-func NewMiddleware(address string, timeout string, leasing string) (*Middleware, error) {
+func NewMiddleware(address, timeout, leasing string) (*Middleware, error) {
 	m := new(Middleware)
 	// This is not checking the address (net.Dial calls will check that)
 	m.spaceAddr = address

@@ -26,28 +26,10 @@ func (c *Calculator) Name() string {
 }
 
 // Work once to a random stranger (for free)
-func (c *Calculator) WorkDefault() error {
-	err := c.mid.Serve(c)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *Calculator) Work(waitTimeout string, replyLeasing string) error {
+func (c *Calculator) Work() error {
 	// TODO: This infinite loop is a test!
 	for {
-		err := c.mid.SetReadTimeout(waitTimeout)
-		if err != nil {
-			return err
-		}
-	
-		err = c.mid.SetWriteLeasing(replyLeasing)
-		if err != nil {
-			return err
-		}
-	
-		err = c.mid.Serve(c)
+		err := c.mid.Serve(c)
 		if err != nil {
 			return err
 		}
