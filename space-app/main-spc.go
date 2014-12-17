@@ -2,31 +2,44 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net"
+	"flag"
 	"net/rpc"
-	"runtime/debug"
 	"github.com/wisllayvitrio/ppd2014/space"
 )
 
+// Command-line flags
+var addr string
+// Default values
+const defaultAddr string = ":8666"
+// Descriptions
+const usageAddr string = "IP:PORT to receive connections (empty IP means all interfaces)"
+// Set the flag names (long and short for each flag var
+func init() {
+	flag.StringVar(&addr, "address", defaultAddr, usageAddr)
+	flag.StringVar(&addr, "a", defaultAddr, usageAddr)
+}
+
 func main() {
-	addr := ":8666"
-	space := space.NewTupleSpace()
+	flag.Parse()
 	
-	// Register in the RPC default server
+	// Create the TupleSpace and register in the RPC default server
+	space := space.NewTupleSpace()
 	rpc.Register(space)
 	
 	// Create a TCP listener
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
-		fmt.Println("ERROR -", err)
-		debug.PrintStack()
+		log.Fatalln("ERROR creating TCP listener:", err)
 	}
 	
 	// Accept and handle connections
-	fmt.Println("DEBUG: Listening in", listener.Addr())
+	fmt.Println("DEBUG - Listening in:", listener.Addr())
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
+			fmt.Println("DEBUG - Ignoring failed connection. Err:", err)
 			// Just ignore this connection
 			continue
 		}

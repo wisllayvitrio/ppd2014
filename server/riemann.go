@@ -12,14 +12,14 @@ type RiemannCalculator struct {
 	m middleware.Middleware
 }
 
-func NewRiemannCalculator(name, spaceAddr, timeout, leasing string, maxExec int) (*RiemannCalculator, error) {
+func NewRiemannCalculator(spaceAddr, timeout, leasing string, maxExec int) (*RiemannCalculator, error) {
 	r := new(RiemannCalculator)
 	ptr, err := middleware.NewMiddleware(spaceAddr, timeout, leasing)
 	if err != nil {
 		return nil, err
 	}
 	
-	r.name = name
+	r.name = "Riemann"
 	r.maxExec = maxExec
 	r.m = *ptr
 	return r, nil

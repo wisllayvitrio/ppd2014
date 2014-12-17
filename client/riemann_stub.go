@@ -6,6 +6,7 @@ import (
 )
 
 type RiemannStub struct {
+	name string
 	m middleware.Middleware
 }
 
@@ -16,13 +17,13 @@ func NewRiemannStub(spaceAddr, timeout, leasing string) (*RiemannStub, error) {
 		return nil, err
 	}
 	
+	r.name = "Riemann"
 	r.m = *ptr
 	return r, nil
 }
 
 func (r *RiemannStub) Integral(a, b, dx float64, coefs []float64, numParts int) (float64, int, error) {
 	// Create the header arguments (same for every part)
-	serverName := "riemann"
 	funcName := "Integral"
 	id := uuid.NewRandom().String()
 	partDelta := (b-a)/float64(numParts)
@@ -30,7 +31,7 @@ func (r *RiemannStub) Integral(a, b, dx float64, coefs []float64, numParts int) 
 	// Prepare the request and send for each part
 	for i := 0; i < numParts; i++ {
 		req := middleware.Request{}
-		req.ServerName = serverName
+		req.ServerName = r.name
 		req.FuncName = funcName
 		req.ResponseID = id
 		req.Args = make([]interface{}, 4)
