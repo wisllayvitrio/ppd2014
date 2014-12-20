@@ -21,7 +21,6 @@ type TupleSpace struct {
 	tupleIndex *index.Index //armazena a tupla que esta relacionada a cada indice
 	waitList *WaitList 		//armazena a lista de espera por tuplas (linear)
 	searchTable [maxTupleSize]*searchIndex
-	
 	l *logger.Logger
 }
 
@@ -77,8 +76,7 @@ func (space *TupleSpace) Write(tuple Request, dummy *Tuple) error {
 	//Armazenando no espaço de tuplas
 	space.tupleIndex.Put(tupleID, tuple.Data, tuple.Leasing)
 
-	auxDur := time.Since(aux)
-	space.l.AddTime("write", auxDur)
+	space.l.AddTime("write", time.Since(aux))
 
 	return nil
 }
@@ -90,8 +88,7 @@ func (space *TupleSpace) Read(template Request, tuple *Tuple) error {
 
 	ret := space.searchTuple(template.Data, searchSpace, true)
 	
-	auxDur := time.Since(aux)
-	space.l.AddTime("search", auxDur)
+	space.l.AddTime("search", time.Since(aux))
 
 	if ret != nil {
 		*tuple = *ret
@@ -118,8 +115,7 @@ func (space *TupleSpace) Take(template Request, tuple *Tuple) error {
 	
 	ret := space.searchTuple(template.Data, searchSpace, true)
 	
-	auxDur := time.Since(aux)
-	space.l.AddTime("search", auxDur)
+	space.l.AddTime("search", time.Since(aux))
 
 	if ret != nil {
 		*tuple = *ret

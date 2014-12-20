@@ -1,9 +1,10 @@
 package client
 
 import (
-	"fmt"
+	"time"
 	//"code.google.com/p/go-uuid/uuid"
 	"github.com/wisllayvitrio/ppd2014/middleware"
+	"github.com/wisllayvitrio/ppd2014/logger"
 )
 
 type execRes struct {
@@ -14,6 +15,7 @@ type execRes struct {
 type RiemannStub struct {
 	name string
 	m middleware.Middleware
+	L *logger.Logger
 }
 
 func NewRiemannStub(spaceAddr, timeout, leasing string) (*RiemannStub, error) {
@@ -25,6 +27,7 @@ func NewRiemannStub(spaceAddr, timeout, leasing string) (*RiemannStub, error) {
 	
 	r.name = "Riemann"
 	r.m = *ptr
+	r.L = logger.NewLogger()
 	return r, nil
 }
 /**/
@@ -66,7 +69,10 @@ func (r *RiemannStub) Integral(a, b, dx float64, coefs []float64, numParts int) 
 }
 
 func (r *RiemannStub) execute(name, funct string, args []interface{}, done chan execRes) {
+	aux := time.Now()
 	res, err := r.m.Execute(name, funct, args)
+	r.L.AddTime("execute", time.Since(aux))
+	
 	if err != nil {
 		done<- execRes{nil, err}
 		return
