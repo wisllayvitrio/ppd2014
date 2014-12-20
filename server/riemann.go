@@ -25,6 +25,7 @@ func NewRiemannCalculator(spaceAddr, timeout, leasing string, maxExec int) (*Rie
 	return r, nil
 }
 
+// Name() and Work() implements the middleware.Service interface
 func (r *RiemannCalculator) Name() string {
 	return r.name
 }
@@ -54,9 +55,9 @@ func (r *RiemannCalculator) execute(done chan error) {
 	}
 	
 	done<- nil
-	return
 }
 
+// Set the middleware timeouts (to allow users of this object to set)
 func (r *RiemannCalculator) SetReadTimeout(timeout string) error {
 	err := r.m.SetReadTimeout(timeout)
 	if err != nil {

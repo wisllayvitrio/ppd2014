@@ -4,6 +4,8 @@ import (
 	"log"
 	"fmt"
 	"flag"
+	"time"
+	"runtime"
 	"strings"
 	"strconv"
 	"github.com/wisllayvitrio/ppd2014/client"
@@ -89,15 +91,25 @@ func init() {
 
 func main() {
 	flag.Parse()
+	numCPU := runtime.NumCPU()
+	runtime.GOMAXPROCS(numCPU)
 	
+	aux := time.Now()
 	r, err := client.NewRiemannStub(addr, timeout, leasing)
 	if err != nil {
 		log.Fatalln("ERROR creating RiemannStub:", err)
 	}
+	createTime := time.Since(aux)
 	
+	aux = time.Now()
 	res, errCount, err := r.Integral(start, fin, dx, coefs, numPart)
 	if err != nil {
 		log.Fatalln("ERROR calculating the Integral:", err)
 	}
+	executeTime := time.Since(aux)
+	
+	// Print results and times
 	fmt.Println("Done! After", errCount, "errors, the final sum is:", res)
+	fmt.Println("Creating the Stub (and middleware) took:", createTime)
+	fmt.Println("Executing the function took:", executeTime)
 }

@@ -4,6 +4,7 @@ import (
 	"log"
 	//"fmt"
 	"flag"
+	"runtime"
 	"github.com/wisllayvitrio/ppd2014/server"
 )
 
@@ -39,6 +40,8 @@ func init() {
 
 func main() {
 	flag.Parse()
+	numCPU := runtime.NumCPU()
+	runtime.GOMAXPROCS(numCPU)
 	
 	r, err := server.NewRiemannCalculator(addr, timeout, leasing, maxExec)
 	if err != nil {

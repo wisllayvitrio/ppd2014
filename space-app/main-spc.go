@@ -6,6 +6,7 @@ import (
 	"net"
 	"flag"
 	"net/rpc"
+	"runtime"
 	"github.com/wisllayvitrio/ppd2014/space"
 )
 
@@ -23,6 +24,8 @@ func init() {
 
 func main() {
 	flag.Parse()
+	numCPU := runtime.NumCPU()
+	runtime.GOMAXPROCS(numCPU)
 	
 	// Create the TupleSpace and register in the RPC default server
 	space := space.NewTupleSpace()

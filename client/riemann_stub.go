@@ -1,9 +1,15 @@
 package client
 
 import (
-	"code.google.com/p/go-uuid/uuid"
+	"fmt"
+	//"code.google.com/p/go-uuid/uuid"
 	"github.com/wisllayvitrio/ppd2014/middleware"
 )
+
+type execRes struct {
+	res []interface{}
+	err error
+}
 
 type RiemannStub struct {
 	name string
@@ -21,7 +27,55 @@ func NewRiemannStub(spaceAddr, timeout, leasing string) (*RiemannStub, error) {
 	r.m = *ptr
 	return r, nil
 }
+/**/
+func (r *RiemannStub) Integral(a, b, dx float64, coefs []float64, numParts int) (float64, int, error) {
+	funcName := "Integral"
+	done := make(chan execRes, numParts)
+	partDelta := (b-a)/float64(numParts)
+	
+	// Call the execution of each part
+	for i := 0; i < numParts; i++ {
+		// Calculate and set this part args
+		args := make([]interface{}, 4)
+		args[0] = interface{}(a + float64(i) * partDelta)
+		args[1] = interface{}(a + float64(i) * partDelta + partDelta)
+		args[2] = interface{}(dx)
+		args[3] = interface{}(coefs)
+		
+		go r.execute(r.name, funcName, args, done)
+	}
+	
+	// Wait for each part to execute
+	sum := 0.0
+	errCount := 0
+	for i := 0; i < numParts; i++ {
+		exeRes := <-done
+		if exeRes.err != nil {
+			errCount++
+			continue
+		}
+		v, ok := exeRes.res[0].(float64)
+		if ok {
+			sum += v
+		} else {
+			errCount++
+		}
+	}
+	
+	return sum, errCount, nil
+}
 
+func (r *RiemannStub) execute(name, funct string, args []interface{}, done chan execRes) {
+	res, err := r.m.Execute(name, funct, args)
+	if err != nil {
+		done<- execRes{nil, err}
+		return
+	}
+	
+	done<- execRes{res, nil}
+}
+/**/
+/*
 func (r *RiemannStub) Integral(a, b, dx float64, coefs []float64, numParts int) (float64, int, error) {
 	// Create the header arguments (same for every part)
 	funcName := "Integral"
@@ -31,7 +85,7 @@ func (r *RiemannStub) Integral(a, b, dx float64, coefs []float64, numParts int) 
 	// Prepare the request and send for each part
 	for i := 0; i < numParts; i++ {
 		req := middleware.Request{}
-		req.ServerName = r.name
+		req.ServiceName = r.name
 		req.FuncName = funcName
 		req.ResponseID = id
 		req.Args = make([]interface{}, 4)
@@ -47,7 +101,7 @@ func (r *RiemannStub) Integral(a, b, dx float64, coefs []float64, numParts int) 
 			return 0.0, 0, err
 		}
 	}
-	
+
 	// Wait, get each response, and calculate the final value
 	sum := 0.0
 	errCount := 0
@@ -55,15 +109,17 @@ func (r *RiemannStub) Integral(a, b, dx float64, coefs []float64, numParts int) 
 		res, err := r.m.ReceiveResponse(id)
 		if err != nil {
 			errCount++
+			continue
+		}
+		// Guarantee that Args[0] is a float64
+		v, ok := res.Args[0].(float64)
+		if ok {
+			sum += v
 		} else {
-			v, ok := res.Args[0].(float64)
-			if ok {
-				sum += v
-			} else {
-				errCount++
-			}
+			errCount++
 		}
 	}
 	
 	return sum, errCount, nil
 }
+/**/

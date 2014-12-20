@@ -1,11 +1,13 @@
 package space
 
 import (
+	"fmt"
 	"time"
 	"sync"
 	"errors"
 	"github.com/wisllayvitrio/ppd2014/index"
 	"github.com/wisllayvitrio/ppd2014/encode"
+	"github.com/wisllayvitrio/ppd2014/logger"
 	"code.google.com/p/go-uuid/uuid"
 )
 
@@ -19,6 +21,8 @@ type TupleSpace struct {
 	tupleIndex *index.Index //armazena a tupla que esta relacionada a cada indice
 	waitList *WaitList 		//armazena a lista de espera por tuplas (linear)
 	searchTable [maxTupleSize]*searchIndex
+	
+	l *logger.Logger
 }
 
 func NewTupleSpace() *TupleSpace {
@@ -30,6 +34,8 @@ func NewTupleSpace() *TupleSpace {
 		space.searchTable[i] = NewSearchIndex(i)
 	}
 
+	space.l = logger.NewLogger()
+	go space.printDaemon()
 	return space
 }
 
@@ -38,7 +44,16 @@ type Request struct{
 	Leasing time.Duration
 }
 
+func (space *TupleSpace) printDaemon() {
+	for {
+		<-time.After(1 * time.Second)
+		fmt.Println("DEBUG - Times (mean): Search:", space.l.GetMean("search"), "Write:", space.l.GetMean("write"))
+	}
+}
+
 func (space *TupleSpace) Write(tuple Request, dummy *Tuple) error {
+	aux := time.Now()
+	
 	space.mutex.Lock()
 	defer space.mutex.Unlock()
 
@@ -62,13 +77,21 @@ func (space *TupleSpace) Write(tuple Request, dummy *Tuple) error {
 	//Armazenando no espaço de tuplas
 	space.tupleIndex.Put(tupleID, tuple.Data, tuple.Leasing)
 
+	auxDur := time.Since(aux)
+	space.l.AddTime("write", auxDur)
+
 	return nil
 }
 
 func (space *TupleSpace) Read(template Request, tuple *Tuple) error {
+	aux := time.Now()
+
 	searchSpace := space.searchTable[template.Data.Size()]
 
 	ret := space.searchTuple(template.Data, searchSpace, true)
+	
+	auxDur := time.Since(aux)
+	space.l.AddTime("search", auxDur)
 
 	if ret != nil {
 		*tuple = *ret
@@ -89,9 +112,14 @@ func (space *TupleSpace) Read(template Request, tuple *Tuple) error {
 }
 
 func (space *TupleSpace) Take(template Request, tuple *Tuple) error {
+	aux := time.Now()
+
 	searchSpace := space.searchTable[template.Data.Size()]
 	
 	ret := space.searchTuple(template.Data, searchSpace, true)
+	
+	auxDur := time.Since(aux)
+	space.l.AddTime("search", auxDur)
 
 	if ret != nil {
 		*tuple = *ret

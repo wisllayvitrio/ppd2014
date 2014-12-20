@@ -6,6 +6,7 @@ import (
 	"errors"
 	"reflect"
 	"net/rpc"
+	"code.google.com/p/go-uuid/uuid"
 	"github.com/wisllayvitrio/ppd2014/space"
 )
 
@@ -19,7 +20,7 @@ type Service interface {
 
 type Request struct {
 	// Demux header
-	ServerName string
+	ServiceName string
 	FuncName string
 	ResponseID string
 	// Data for the actual execution
@@ -38,11 +39,36 @@ type Middleware struct {
 	writeLeasing time.Duration
 }
 
-// Constructors
+func invoke(obj interface{}, methodName string, args []interface{}) ([]interface{}, error) {
+	inputs := make([]reflect.Value, len(args))
+	for i, v := range args {
+		inputs[i] = reflect.ValueOf(v)
+	}
+	
+	// Get the method (of type []reflect.Value)
+	objValue := reflect.ValueOf(obj)
+	method := objValue.MethodByName(methodName)
+	
+	// Test if method was found
+	if !method.IsValid() {
+		return nil, errors.New(fmt.Sprintf("%s was not found on object of type %s", methodName, objValue.Type()))
+	}
+	
+	// Call the method (outputs is of type []reflect.Value)
+	outputs := method.Call(inputs)
+	// Get the []interface{} of the outputs
+	result := make([]interface{}, len(outputs))
+	for i, v := range outputs {
+		result[i] = v.Interface()
+	}
+	
+	return result, nil
+}
+
+// Middleware Constructors
 func NewMiddlewareDefault(address string) (*Middleware, error) {
 	return NewMiddleware(address, DefaultReadTimeout, DefaultWriteLeasing)
 }
-
 func NewMiddleware(address, timeout, leasing string) (*Middleware, error) {
 	m := new(Middleware)
 	// This is not checking the address (net.Dial calls will check that)
@@ -72,7 +98,6 @@ func (m *Middleware) SetReadTimeout(timeout string) error {
 	m.readTimeout = dur
 	return nil
 }
-
 // Function to change the write leasing configuration
 func (m *Middleware) SetWriteLeasing(leasing string) error {
 	dur, err := time.ParseDuration(leasing)
@@ -82,11 +107,54 @@ func (m *Middleware) SetWriteLeasing(leasing string) error {
 	m.writeLeasing = dur
 	return nil
 }
+/**/
+// Create and send a request, then wait for the response
+func (m *Middleware) Execute(serviceName, funcName string, args []interface{}) ([]interface{}, error) {
+	id := uuid.NewRandom().String()
+	req := Request{}
+	req.ServiceName = serviceName
+	req.FuncName = funcName
+	req.ResponseID = id
+	req.Args = args
+	
+	err := m.SendRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	
+	res, err := m.ReceiveResponse(id)
+	if err != nil {
+		return nil, err
+	}
+	
+	return res.Args, nil
+}
+/**/
+// Get a request and call the worker function to execute it
+func (m *Middleware) Serve(obj Service) error {
+	req, err := m.ReceiveRequest(obj.Name())
+	if err != nil {
+		return err
+	}
+	
+	results, err := invoke(obj, req.FuncName, req.Args)
+	if err != nil {
+		return err
+	}
+	
+	res := Response{req.ResponseID, results}
+	err = m.SendResponse(res)
+	if err != nil {
+		return err
+	}
+	
+	return nil
+}
 
-// Send to TupleSpace
+// Send to TupleSpace - Raw interface: SendRequest() and SendResponse()
 func (m *Middleware) SendRequest(req Request) error {
 	// Create a tuple
-	tuple, err := space.NewTuple(req.ServerName, req.FuncName, req.ResponseID, req.Args)
+	tuple, err := space.NewTuple(req.ServiceName, req.FuncName, req.ResponseID, req.Args)
 	if err != nil {
 		return err
 	}
@@ -125,7 +193,7 @@ func (m *Middleware) SendResponse(res Response) error {
 	return nil
 }
 
-// Read from TupleSpace
+// Read from TupleSpace - Raw interface: ReceiveRequest() and ReceiveResponse()
 func (m *Middleware) ReceiveResponse(id string) (*Response, error) {
 	tuple, err := space.NewTuple(id, space.NilValue())
 	if err != nil {
@@ -158,8 +226,8 @@ func (m *Middleware) ReceiveResponse(id string) (*Response, error) {
 	return res, nil
 }
 
-func (m *Middleware) ReceiveRequest(serverName string) (*Request, error) {
-	tuple, err := space.NewTuple(serverName, space.NilValue(), space.NilValue(), space.NilValue())
+func (m *Middleware) ReceiveRequest(serviceName string) (*Request, error) {
+	tuple, err := space.NewTuple(serviceName, space.NilValue(), space.NilValue(), space.NilValue())
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +243,7 @@ func (m *Middleware) ReceiveRequest(serverName string) (*Request, error) {
 	}
 	
 	req := new(Request)
-	err = reqTuple.Get(0, &req.ServerName)
+	err = reqTuple.Get(0, &req.ServiceName)
 	if err != nil {
 		return nil, err
 	}
@@ -206,51 +274,4 @@ func (m *Middleware) communicate(call string, t time.Duration, req space.Tuple, 
 	}
 
 	return nil
-}
-
-// Get a request and call the worker function to execute it
-func (m *Middleware) Serve(obj Service) error {
-	req, err := m.ReceiveRequest(obj.Name())
-	if err != nil {
-		return err
-	}
-	
-	results, err := invoke(obj, req.FuncName, req.Args)
-	if err != nil {
-		return err
-	}
-	
-	res := Response{req.ResponseID, results}
-	err = m.SendResponse(res)
-	if err != nil {
-		return err
-	}
-	
-	return nil
-}
-
-func invoke(obj interface{}, methodName string, args []interface{}) ([]interface{}, error) {
-	inputs := make([]reflect.Value, len(args))
-	for i, v := range args {
-		inputs[i] = reflect.ValueOf(v)
-	}
-	
-	// Get the method (of type []reflect.Value)
-	objValue := reflect.ValueOf(obj)
-	method := objValue.MethodByName(methodName)
-	
-	// Test if method was found
-	if !method.IsValid() {
-		return nil, errors.New(fmt.Sprintf("%s was not found on object of type %s", methodName, objValue.Type()))
-	}
-	
-	// Call the method (outputs is of type []reflect.Value)
-	outputs := method.Call(inputs)
-	// Get the []interface{} of the outputs
-	result := make([]interface{}, len(outputs))
-	for i, v := range outputs {
-		result[i] = v.Interface()
-	}
-	
-	return result, nil
 }
