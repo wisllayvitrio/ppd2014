@@ -53,7 +53,19 @@ Resumo. Resumo. Resumo. Resumo. Resumo. Resumo. Resumo. Resumo. Resumo. Resumo. 
 \section{Introdução}
 \label{sec:introducao}
 
-Introdução
+Espaço de tuplas é um conceito de memória associativa para computação distribuída/paralela.
+Desenolvido por David Gelernter na Universidade de Yale, teve sua primeira implementação na linguagem de coordenação ``Linda'' (homenagem a uma atriz pornô de nome Linda Lovelace, assim como o nome da linguagem ``Ada'' é uma homenagem à Ada Lovelace~\cite{web:name_linda}).
+% web:name_linda http://www.nytimes.com/1992/01/19/business/david-gelernter-s-romance-with-linda.html
+
+Provê um repositório de tuplas que pode ser acessado concorrentemente por zero ou mais processos.
+Por ser baseado em memória associativa, as tuplas são acessadas por seu conteúdo e não por endereços.
+As tuplas não estão ligadas à nenhum processo, e qualquer um deles pode inserir, ler ou remover tuplas.
+Este desacoplamento total entre as partes integrantes do sistema provido pelo espaço de tuplas é sua principal vantagem.
+
+Várias linguagens têm implementações de espaço de tuplas, sendo a especificação para Java, JavaSpaces~\cite{web:javaspaces}, a mais famosa.
+Como parte da tecnologia Jini, JavaSpaces é utilizado em serviços de finanças e telecomunicações para alcançar escalabilidade utilizando processamento paralelo.
+Por outro lado, a tecnologia Jini como um todo não é sucesso comercial, e o JavaSpaces não é amplamente utilizado.
+% web:javaspaces https://river.apache.org/doc/specs/html/js-spec.html
 
 \section{Proposta}
 \label{sec:proposta}
@@ -104,11 +116,13 @@ mob.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
 	"Bounds", RectangleValue(Rectangle(-walkX, walkX, -walkY, walkY)));
 \end{lstlisting}
 
+\section{Caso de teste}
+\label{sec:caso_de_teste}
+
 \section{Resultados}
 \label{sec:resultados}
 
 Resultados
-
 
 \begin{figure}[h]
 	\center

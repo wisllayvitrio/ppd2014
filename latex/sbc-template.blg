@@ -2,11 +2,12 @@ This is BibTeX, Version 0.99d (TeX Live 2012/Debian)
 Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
 The top-level auxiliary file: sbc-template.aux
 The style file: sbc.bst
-I found no \citation commands---while reading file sbc-template.aux
 Database file #1: sbc-template.bib
+Warning--I didn't find a database entry for "web:name_linda"
+Warning--I didn't find a database entry for "web:javaspaces"
 You've used 0 entries,
             1935 wiz_defined-function locations,
-            470 strings with 3672 characters,
+            472 strings with 3700 characters,
 and the built_in function-call counts, 17 in all, are:
 = -- 0
 > -- 0
@@ -45,4 +46,4 @@ warning$ -- 0
 while$ -- 0
 width$ -- 0
 write$ -- 2
-(There was 1 error message)
+(There were 2 warnings)
