@@ -112,5 +112,4 @@ func main() {
 	fmt.Println("Done! After", errCount, "errors, the final sum is:", res)
 	fmt.Println("Creating the Stub (and middleware) took:", createTime)
 	fmt.Println("Executing the function took:", executeTime)
-	fmt.Println("Mean time of execution of each part:", r.L.GetMean("execute"))
 }

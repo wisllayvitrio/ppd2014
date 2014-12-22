@@ -6,7 +6,6 @@ import (
 	"errors"
 	"reflect"
 	"net/rpc"
-	"code.google.com/p/go-uuid/uuid"
 	"github.com/wisllayvitrio/ppd2014/space"
 )
 
@@ -107,29 +106,7 @@ func (m *Middleware) SetWriteLeasing(leasing string) error {
 	m.writeLeasing = dur
 	return nil
 }
-/**/
-// Create and send a request, then wait for the response
-func (m *Middleware) Execute(serviceName, funcName string, args []interface{}) ([]interface{}, error) {
-	id := uuid.NewRandom().String()
-	req := Request{}
-	req.ServiceName = serviceName
-	req.FuncName = funcName
-	req.ResponseID = id
-	req.Args = args
-	
-	err := m.SendRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	
-	res, err := m.ReceiveResponse(id)
-	if err != nil {
-		return nil, err
-	}
-	
-	return res.Args, nil
-}
-/**/
+
 // Get a request and call the worker function to execute it
 func (m *Middleware) Serve(obj Service) error {
 	req, err := m.ReceiveRequest(obj.Name())

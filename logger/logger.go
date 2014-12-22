@@ -1,138 +1,123 @@
 package logger
 
 import (
+	"os"
+	"log"
 	"fmt"
 	"time"
 	"runtime"
+	"syscall"
 )
 
-/*type MemStats struct {
-	// General statistics.
-	Alloc      uint64 // bytes allocated and still in use
-	TotalAlloc uint64 // bytes allocated (even if freed)
-	Sys        uint64 // bytes obtained from system (sum of XxxSys below)
-	Lookups    uint64 // number of pointer lookups
-	Mallocs    uint64 // number of mallocs
-	Frees      uint64 // number of frees
-
-	// Main allocation heap statistics.
-	HeapAlloc    uint64 // bytes allocated and still in use
-	HeapSys      uint64 // bytes obtained from system
-	HeapIdle     uint64 // bytes in idle spans
-	HeapInuse    uint64 // bytes in non-idle span
-	HeapReleased uint64 // bytes released to the OS
-	HeapObjects  uint64 // total number of allocated objects
-
-	// Low-level fixed-size structure allocator statistics.
-	//	Inuse is bytes used now.
-	//	Sys is bytes obtained from system.
-	StackInuse  uint64 // bytes used by stack allocator
-	StackSys    uint64
-	MSpanInuse  uint64 // mspan structures
-	MSpanSys    uint64
-	MCacheInuse uint64 // mcache structures
-	MCacheSys   uint64
-	BuckHashSys uint64 // profiling bucket hash table
-	GCSys       uint64 // GC metadata
-	OtherSys    uint64 // other system allocations
-
-	// Garbage collector statistics.
-	NextGC       uint64 // next collection will happen when HeapAlloc ≥ this amount
-	LastGC       uint64 // end time of last collection (nanoseconds since 1970)
-	PauseTotalNs uint64
-	PauseNs      [256]uint64 // circular buffer of recent GC pause durations, most recent at [(NumGC+255)%256]
-	PauseEnd     [256]uint64 // circular buffer of recent GC pause end times
-	NumGC        uint32
-	EnableGC     bool
-	DebugGC      bool
-
-	// Per-size allocation statistics.
-	// 61 is NumSizeClasses in the C code.
-	BySize [61]struct {
-		Size    uint32
-		Mallocs uint64
-		Frees   uint64
-	}
-}*/
-
-// Stores the total time of count events for something named name
+// Stores the total time of count events for something
 type timeData struct {
 	total time.Time
 	count int
 }
 
 type Logger struct {
-	timeMap map[string]timeData
-	// TODO: MemmoryMaps, CounterMaps, CPUMaps and whatnot
+	file *os.File
+	delta time.Duration
+	readTime timeData
+	writeTime timeData
+	cpuTime int64
+	memAlloc uint64
 }
 
-func NewLogger() *Logger {
-	res := new(Logger)
-	res.timeMap = make(map[string]timeData)
+func NewLogger(filePath string, delta time.Duration) (*Logger, error) {
+	// Open the file, or create a new one if it does not exist
+	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY, 0666)
+	if err != nil {
+		if os.IsNotExist(err) {
+			file, err = os.Create(filePath)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
 	
-	return res
+	res := new(Logger)
+	res.file = file
+	res.delta = delta
+	
+	res.readTime = timeData{time.Time{}, 0}
+	res.writeTime = timeData{time.Time{}, 0}
+	res.cpuTime = getCPUTime()
+	res.memAlloc = getMemAlloc()
+	
+	return res, nil
 }
 
-func (l *Logger) AddTime(name string, t time.Duration) {
-	_, exists := l.timeMap[name]
-	if !exists {
-		// Initialize (Time{} is Epoch: 0001-01-01 00:00:00 +0000 UTC)
-		l.timeMap[name] = timeData{time.Time{}, 0}
+func (l *Logger) LogStart() {
+	// Print an initial line (to separate executions)
+	c, err := l.file.WriteString("----------------------------------------------------\n")
+	if err != nil {
+		log.Fatal(fmt.Sprintln("ERROR writing", c, "characters on log file", l.file.Name(), ":", err))
 	}
-	// Update (maps cant be set directly)
-	aux := l.timeMap[name]
-	aux.total = aux.total.Add(t)
-	aux.count++
-	l.timeMap[name] = aux
+
+	// Append on file at each delta time
+	for ; ; <-time.After(l.delta) {
+		sTime := l.GetTimeMean(true)
+		wTime := l.GetTimeMean(false)
+		cpu := l.GetCPU(l.delta)
+		mem := l.GetMem()
+		
+		str := fmt.Sprintln(sTime, wTime, cpu, mem)
+		c, err := l.file.WriteString(str)
+		if err != nil {
+			log.Fatal(fmt.Sprintln("ERROR writing", c, "characters on log file", l.file.Name(), ":", err))
+		}
+	}
 }
 
-func (l *Logger) GetMean(name string) time.Duration {
-	data, exists := l.timeMap[name]
-	if !exists {
-		// Ugly code to return zero duration (return 0.0 seems to work)
-		return time.Time{}.Sub(time.Time{})
+func (l *Logger) AddTime(readTime bool, t time.Duration) {
+	if readTime {
+		l.readTime.total = l.readTime.total.Add(t)
+		l.readTime.count++
+	} else {
+		l.writeTime.total = l.writeTime.total.Add(t)
+		l.writeTime.count++
 	}
-	// REALLY UGLY code to get the total duration and divide by count
+}
+
+func (l *Logger) GetTimeMean(readTime bool) int64 {
+	var data timeData
+	if readTime {
+		data = l.readTime
+	} else {
+		data = l.writeTime
+	}
+	if data.count == 0 {
+		return 0
+	}
+	// Code to get the total duration and divide by count
 	totalDuration := data.total.Sub(time.Time{})
 	truncatedMean := totalDuration.Nanoseconds() / int64(data.count)
-	timeMean := time.Unix(0, truncatedMean)
-	durationMean := timeMean.Sub(time.Unix(0, 0))
-	return durationMean
+	return truncatedMean
 }
 
-// TODO: This was just a test function, probably should be deleted
-func PrintEntireMemStats() {
-	stats := runtime.MemStats{}
-	runtime.ReadMemStats(&stats)
-	fmt.Println("LOG - MemStats:")
-	fmt.Println("LOG - Alloc:", stats.Alloc)
-	fmt.Println("LOG - TotalAlloc:", stats.TotalAlloc)
-	fmt.Println("LOG - Sys:", stats.Sys)
-	fmt.Println("LOG - Lookups:", stats.Lookups)
-	fmt.Println("LOG - Mallocs:", stats.Mallocs)
-	fmt.Println("LOG - Frees:", stats.Frees)
-	fmt.Println("LOG - HeapAloc:", stats.HeapAlloc)
-	fmt.Println("LOG - HeapSys:", stats.HeapSys)
-	fmt.Println("LOG - HeapIdle:", stats.HeapIdle)
-	fmt.Println("LOG - HeapInuse:", stats.HeapInuse)
-	fmt.Println("LOG - HeapReleased:", stats.HeapReleased)
-	fmt.Println("LOG - HeapObjects:", stats.HeapObjects)
-	fmt.Println("LOG - StackInuse:", stats.StackInuse)
-	fmt.Println("LOG - StackSys:", stats.StackSys)
-	fmt.Println("LOG - MSpanInuse:", stats.MSpanInuse)
-	fmt.Println("LOG - MSpanSys:", stats.MSpanSys)
-	fmt.Println("LOG - MCacheInuse:", stats.MCacheInuse)
-	fmt.Println("LOG - MCacheSys:", stats.MCacheSys)
-	fmt.Println("LOG - BuckHashSys:", stats.BuckHashSys)
-	fmt.Println("LOG - GCSys:", stats.GCSys)
-	fmt.Println("LOG - OtherSys:", stats.OtherSys)
-	fmt.Println("LOG - NextGC:", stats.NextGC)
-	fmt.Println("LOG - LastGC:", stats.LastGC)
-	fmt.Println("LOG - PauseTotalNs:", stats.PauseTotalNs)
-	fmt.Println("LOG - PauseNs:", stats.PauseNs)
-	//fmt.Println("LOG - PauseEnd:", stats.PauseEnd)
-	fmt.Println("LOG - NumGC:", stats.NumGC)
-	fmt.Println("LOG - EnableGC:", stats.EnableGC)
-	fmt.Println("LOG - DebugGC:", stats.DebugGC)
-	fmt.Println("LOG - BySize:", stats.BySize)
+func (l *Logger) GetCPU(t time.Duration) float64 {
+	newTime := getCPUTime()
+	mean := float64(newTime - l.cpuTime) / float64(t.Nanoseconds())
+	// TODO: divide by num of processors
+	return (mean * 100)
+}
+
+func (l *Logger) GetMem() uint64 {
+	l.memAlloc = getMemAlloc()
+	return l.memAlloc
+}
+
+func getCPUTime() int64 {
+	usage := syscall.Rusage{}
+	syscall.Getrusage(syscall.RUSAGE_SELF, &usage)
+	return usage.Utime.Usec + usage.Stime.Usec
+}
+
+func getMemAlloc() uint64 {
+	mem := runtime.MemStats{}
+	runtime.ReadMemStats(&mem)
+	return mem.Alloc
 }

@@ -1,10 +1,8 @@
 package client
 
 import (
-	"time"
-	//"code.google.com/p/go-uuid/uuid"
+	"code.google.com/p/go-uuid/uuid"
 	"github.com/wisllayvitrio/ppd2014/middleware"
-	"github.com/wisllayvitrio/ppd2014/logger"
 )
 
 type execRes struct {
@@ -15,7 +13,6 @@ type execRes struct {
 type RiemannStub struct {
 	name string
 	m middleware.Middleware
-	L *logger.Logger
 }
 
 func NewRiemannStub(spaceAddr, timeout, leasing string) (*RiemannStub, error) {
@@ -27,61 +24,9 @@ func NewRiemannStub(spaceAddr, timeout, leasing string) (*RiemannStub, error) {
 	
 	r.name = "Riemann"
 	r.m = *ptr
-	r.L = logger.NewLogger()
 	return r, nil
 }
-/**/
-func (r *RiemannStub) Integral(a, b, dx float64, coefs []float64, numParts int) (float64, int, error) {
-	funcName := "Integral"
-	done := make(chan execRes, numParts)
-	partDelta := (b-a)/float64(numParts)
-	
-	// Call the execution of each part
-	for i := 0; i < numParts; i++ {
-		// Calculate and set this part args
-		args := make([]interface{}, 4)
-		args[0] = interface{}(a + float64(i) * partDelta)
-		args[1] = interface{}(a + float64(i) * partDelta + partDelta)
-		args[2] = interface{}(dx)
-		args[3] = interface{}(coefs)
-		
-		go r.execute(r.name, funcName, args, done)
-	}
-	
-	// Wait for each part to execute
-	sum := 0.0
-	errCount := 0
-	for i := 0; i < numParts; i++ {
-		exeRes := <-done
-		if exeRes.err != nil {
-			errCount++
-			continue
-		}
-		v, ok := exeRes.res[0].(float64)
-		if ok {
-			sum += v
-		} else {
-			errCount++
-		}
-	}
-	
-	return sum, errCount, nil
-}
 
-func (r *RiemannStub) execute(name, funct string, args []interface{}, done chan execRes) {
-	aux := time.Now()
-	res, err := r.m.Execute(name, funct, args)
-	r.L.AddTime("execute", time.Since(aux))
-	
-	if err != nil {
-		done<- execRes{nil, err}
-		return
-	}
-	
-	done<- execRes{res, nil}
-}
-/**/
-/*
 func (r *RiemannStub) Integral(a, b, dx float64, coefs []float64, numParts int) (float64, int, error) {
 	// Create the header arguments (same for every part)
 	funcName := "Integral"
@@ -128,4 +73,3 @@ func (r *RiemannStub) Integral(a, b, dx float64, coefs []float64, numParts int) 
 	
 	return sum, errCount, nil
 }
-/**/

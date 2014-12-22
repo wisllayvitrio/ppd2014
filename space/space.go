@@ -33,21 +33,19 @@ func NewTupleSpace() *TupleSpace {
 		space.searchTable[i] = NewSearchIndex(i)
 	}
 
-	space.l = logger.NewLogger()
-	go space.printDaemon()
+	var err error
+	space.l, err = logger.NewLogger("./ppd2014_space_log.txt", time.Second)
+	if err != nil {
+		fmt.Println("ERROR creating logger:", err)
+	}
+	go space.l.LogStart()
+	
 	return space
 }
 
 type Request struct{
 	Data Tuple
 	Leasing time.Duration
-}
-
-func (space *TupleSpace) printDaemon() {
-	for {
-		<-time.After(1 * time.Second)
-		fmt.Println("DEBUG - Times (mean): Search:", space.l.GetMean("search"), "Write:", space.l.GetMean("write"))
-	}
 }
 
 func (space *TupleSpace) Write(tuple Request, dummy *Tuple) error {
@@ -76,7 +74,7 @@ func (space *TupleSpace) Write(tuple Request, dummy *Tuple) error {
 	//Armazenando no espaço de tuplas
 	space.tupleIndex.Put(tupleID, tuple.Data, tuple.Leasing)
 
-	space.l.AddTime("write", time.Since(aux))
+	space.l.AddTime(false, time.Since(aux))
 
 	return nil
 }
@@ -88,7 +86,7 @@ func (space *TupleSpace) Read(template Request, tuple *Tuple) error {
 
 	ret := space.searchTuple(template.Data, searchSpace, true)
 	
-	space.l.AddTime("search", time.Since(aux))
+	space.l.AddTime(true, time.Since(aux))
 
 	if ret != nil {
 		*tuple = *ret
@@ -115,7 +113,7 @@ func (space *TupleSpace) Take(template Request, tuple *Tuple) error {
 	
 	ret := space.searchTuple(template.Data, searchSpace, true)
 	
-	space.l.AddTime("search", time.Since(aux))
+	space.l.AddTime(true, time.Since(aux))
 
 	if ret != nil {
 		*tuple = *ret
