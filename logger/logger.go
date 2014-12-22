@@ -102,8 +102,9 @@ func (l *Logger) GetTimeMean(searchTime bool) int64 {
 func (l *Logger) GetCPU(t time.Duration) float64 {
 	newTime := getCPUTime()
 	mean := float64(newTime - l.cpuTime) / float64(t.Nanoseconds())
-	// TODO: divide by num of processors
-	return (mean * 100)
+	l.cpuTime = newTime
+	
+	return (mean * 100) / float64(runtime.NumCPU())
 }
 
 func (l *Logger) GetMem() uint64 {
@@ -114,7 +115,7 @@ func (l *Logger) GetMem() uint64 {
 func getCPUTime() int64 {
 	usage := syscall.Rusage{}
 	syscall.Getrusage(syscall.RUSAGE_SELF, &usage)
-	return usage.Utime.Usec + usage.Stime.Usec
+	return usage.Utime.Nano() + usage.Stime.Nano()
 }
 
 func getMemAlloc() uint64 {
