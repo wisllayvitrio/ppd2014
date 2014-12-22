@@ -46,7 +46,7 @@ var start float64
 var fin float64
 var dx float64
 var numPart int
-var maxExec int
+var numExec int
 var coefs polynomial
 // Default values
 const defaultAddr string = "localhost:8666"
@@ -56,7 +56,7 @@ const defaultStart float64 = 0.0
 const defaultFin float64 = 1000000.0
 const defaultDx float64 = 0.1
 const defaultNumPart int = 200
-const defaultMaxExec int = 1
+const defaultnumExec int = 1
 // Descriptions
 const usageAddr string = "IP:PORT of the Tuple Space"
 const usageTimeout string = "Time to wait for messages from the Tuple Space"
@@ -65,8 +65,8 @@ const usageStart string = "Approximate the integral value starting from here"
 const usageFin string = "Approximate the integral value until here"
 const usageDx string = "DeltaX used when calculating the areas in the Riemann sum"
 const usageNumPart string = "Ammout of different requests to send to the Tuple Space"
-const usageMaxExec string = "Number of clients running concurrently (goroutines)"
-const usageCoefs string = "Coeficients of the polynomial ('#' separated float list)"
+const usagenumExec string = "Number of clients running concurrently (goroutines)"
+const usageCoefs string = "Number of sequential executions of the client"
 // Set the flag names (long and short for each flag var
 func init() {
 	flag.StringVar(&addr, "address", defaultAddr, usageAddr)
@@ -90,14 +90,14 @@ func init() {
 	flag.IntVar(&numPart, "partitions", defaultNumPart, usageNumPart)
 	flag.IntVar(&numPart, "p", defaultNumPart, usageNumPart)
 	
-	flag.IntVar(&maxExec, "goroutines", defaultMaxExec, usageMaxExec)
-	flag.IntVar(&maxExec, "g", defaultMaxExec, usageMaxExec)
+	flag.IntVar(&numExec, "executions", defaultnumExec, usagenumExec)
+	flag.IntVar(&numExec, "e", defaultnumExec, usagenumExec)
 	
 	flag.Var(&coefs, "coefficients", usageCoefs)
 	flag.Var(&coefs, "c", usageCoefs)
 }
 
-func execute(file *os.File, done chan bool) {
+func execute(file *os.File) {
 	aux := time.Now()
 	r, err := client.NewRiemannStub(addr, timeout, leasing)
 	if err != nil {
@@ -153,12 +153,8 @@ func main() {
 		log.Fatal(fmt.Sprintln("ERROR writing", c, "characters on log file", file.Name(), ":", err))
 	}
 
-	// Call the concurrent client executions
-	done := make(chan bool, maxExec)
-	for i := 0; i < maxExec; i++ {
-		go execute(file, done)
-	}
-	for i := 0; i < maxExec; i++ {
-		<-done
+	// Call the client executions
+	for i := 0; i < numExec; i++ {
+		execute(file)
 	}
 }
