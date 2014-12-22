@@ -54,9 +54,7 @@ func (r *RiemannStub) Integral(a, b, dx float64, coefs []float64, numParts int) 
 		req.Args[3] = interface{}(coefs)
 		
 		// Send the request of this part
-		aux := time.Now()
 		go r.m.SendRequest(req)
-		r.l.AddTime(false, time.Since(aux))}
 	}
 
 	// Wait, get each response, and calculate the final value

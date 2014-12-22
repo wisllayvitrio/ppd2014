@@ -123,8 +123,6 @@ func execute(file *os.File) {
 	fmt.Println("Done! After", errCount, "errors, the final sum is:", res)
 	fmt.Println("Creating the Stub (and middleware) took:", createTime)
 	fmt.Println("Executing the function took:", executeTime)
-	
-	done<- true
 }
 
 func main() {
