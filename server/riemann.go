@@ -2,7 +2,9 @@ package server
 
 import (
 	"fmt"
+	"time"
 	"math"
+	"github.com/wisllayvitrio/ppd2014/logger"
 	"github.com/wisllayvitrio/ppd2014/middleware"
 )
 
@@ -10,6 +12,7 @@ type RiemannCalculator struct {
 	name string
 	maxExec int
 	m middleware.Middleware
+	l *logger.Logger
 }
 
 func NewRiemannCalculator(spaceAddr, timeout, leasing string, maxExec int) (*RiemannCalculator, error) {
@@ -22,6 +25,10 @@ func NewRiemannCalculator(spaceAddr, timeout, leasing string, maxExec int) (*Rie
 	r.name = "Riemann"
 	r.maxExec = maxExec
 	r.m = *ptr
+	
+	r.l = logger.NewLogger("ppd2014_service_log.txt", time.Second)
+	go r.l.LogStart()
+	
 	return r, nil
 }
 
@@ -48,7 +55,9 @@ func (r *RiemannCalculator) Work() error {
 }
 
 func (r *RiemannCalculator) execute(done chan error) {
+	aux := time.Now()
 	err := r.m.Serve(r)
+	r.l.AddTime(true, time.Since(aux))
 	if err != nil {
 		done<- err
 		return
@@ -76,9 +85,11 @@ func (r *RiemannCalculator) SetWriteLeasing(leasing string) error {
 // Riemann Integral calculation
 func (r *RiemannCalculator) Integral(x, y, dx float64, coefs []float64) float64 {
 	sum := 0.0
+	aux := time.Now()
 	for i := x; i < y; i += dx {
 		sum += dx * poly(i, coefs)
 	}
+	r.l.AddTime(false, time.Since(aux))
 	return sum
 }
 

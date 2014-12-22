@@ -1,7 +1,9 @@
 package client
 
 import (
+	"time"
 	"code.google.com/p/go-uuid/uuid"
+	"github.com/wisllayvitrio/ppd2014/logger"
 	"github.com/wisllayvitrio/ppd2014/middleware"
 )
 
@@ -13,6 +15,7 @@ type execRes struct {
 type RiemannStub struct {
 	name string
 	m middleware.Middleware
+	l *logger.Logger
 }
 
 func NewRiemannStub(spaceAddr, timeout, leasing string) (*RiemannStub, error) {
@@ -24,6 +27,10 @@ func NewRiemannStub(spaceAddr, timeout, leasing string) (*RiemannStub, error) {
 	
 	r.name = "Riemann"
 	r.m = *ptr
+	
+	r.l = logger.NewLogger("ppd2014_stub_log.txt", time.Second)
+	go r.l.LogStart()
+	
 	return r, nil
 }
 
@@ -47,7 +54,9 @@ func (r *RiemannStub) Integral(a, b, dx float64, coefs []float64, numParts int) 
 		req.Args[3] = interface{}(coefs)
 		
 		// Send the request of this part
+		aux := time.Now()
 		err := r.m.SendRequest(req)
+		r.l.AddTime(false, time.Since(aux))
 		if err != nil {
 			return 0.0, 0, err
 		}
@@ -57,7 +66,9 @@ func (r *RiemannStub) Integral(a, b, dx float64, coefs []float64, numParts int) 
 	sum := 0.0
 	errCount := 0
 	for i := 0; i < numParts; i++ {
+		aux := time.Now()
 		res, err := r.m.ReceiveResponse(id)
+		r.l.AddTime(true, time.Since(aux))
 		if err != nil {
 			errCount++
 			continue

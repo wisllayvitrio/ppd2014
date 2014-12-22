@@ -7,6 +7,7 @@ import (
 	"time"
 	"runtime"
 	"syscall"
+	"go/build"
 )
 
 // Stores the total time of count events for something
@@ -18,23 +19,24 @@ type timeData struct {
 type Logger struct {
 	file *os.File
 	delta time.Duration
-	readTime timeData
+	searchTime timeData
 	writeTime timeData
 	cpuTime int64
 	memAlloc uint64
 }
 
-func NewLogger(filePath string, delta time.Duration) (*Logger, error) {
+func NewLogger(fileName string, delta time.Duration) *Logger {
 	// Open the file, or create a new one if it does not exist
+	filePath := build.Default.GOPATH + "/src/github.com/wisllayvitrio/ppd2014/logs/" + fileName
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY, 0666)
 	if err != nil {
 		if os.IsNotExist(err) {
 			file, err = os.Create(filePath)
 			if err != nil {
-				return nil, err
+				log.Fatal(fmt.Sprintln("ERROR creating file:", err))
 			}
 		} else {
-			return nil, err
+			log.Fatal(fmt.Sprintln("ERROR opening file:", err))
 		}
 	}
 	
@@ -42,12 +44,12 @@ func NewLogger(filePath string, delta time.Duration) (*Logger, error) {
 	res.file = file
 	res.delta = delta
 	
-	res.readTime = timeData{time.Time{}, 0}
+	res.searchTime = timeData{time.Time{}, 0}
 	res.writeTime = timeData{time.Time{}, 0}
 	res.cpuTime = getCPUTime()
 	res.memAlloc = getMemAlloc()
 	
-	return res, nil
+	return res
 }
 
 func (l *Logger) LogStart() {
@@ -56,14 +58,13 @@ func (l *Logger) LogStart() {
 	if err != nil {
 		log.Fatal(fmt.Sprintln("ERROR writing", c, "characters on log file", l.file.Name(), ":", err))
 	}
-
 	// Append on file at each delta time
 	for ; ; <-time.After(l.delta) {
 		sTime := l.GetTimeMean(true)
 		wTime := l.GetTimeMean(false)
 		cpu := l.GetCPU(l.delta)
 		mem := l.GetMem()
-		
+	
 		str := fmt.Sprintln(sTime, wTime, cpu, mem)
 		c, err := l.file.WriteString(str)
 		if err != nil {
@@ -72,20 +73,20 @@ func (l *Logger) LogStart() {
 	}
 }
 
-func (l *Logger) AddTime(readTime bool, t time.Duration) {
-	if readTime {
-		l.readTime.total = l.readTime.total.Add(t)
-		l.readTime.count++
+func (l *Logger) AddTime(searchTime bool, t time.Duration) {
+	if searchTime {
+		l.searchTime.total = l.searchTime.total.Add(t)
+		l.searchTime.count++
 	} else {
 		l.writeTime.total = l.writeTime.total.Add(t)
 		l.writeTime.count++
 	}
 }
 
-func (l *Logger) GetTimeMean(readTime bool) int64 {
+func (l *Logger) GetTimeMean(searchTime bool) int64 {
 	var data timeData
-	if readTime {
-		data = l.readTime
+	if searchTime {
+		data = l.searchTime
 	} else {
 		data = l.writeTime
 	}

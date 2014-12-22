@@ -1,14 +1,13 @@
 package space
 
 import (
-	"fmt"
 	"time"
 	"sync"
 	"errors"
+	"code.google.com/p/go-uuid/uuid"
 	"github.com/wisllayvitrio/ppd2014/index"
 	"github.com/wisllayvitrio/ppd2014/encode"
 	"github.com/wisllayvitrio/ppd2014/logger"
-	"code.google.com/p/go-uuid/uuid"
 )
 
 const maxTupleSize int = 10
@@ -33,11 +32,7 @@ func NewTupleSpace() *TupleSpace {
 		space.searchTable[i] = NewSearchIndex(i)
 	}
 
-	var err error
-	space.l, err = logger.NewLogger("./ppd2014_space_log.txt", time.Second)
-	if err != nil {
-		fmt.Println("ERROR creating logger:", err)
-	}
+	space.l = logger.NewLogger("ppd2014_space_log.txt", time.Second)
 	go space.l.LogStart()
 	
 	return space
