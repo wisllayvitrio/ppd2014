@@ -142,14 +142,14 @@ tuplas por aridade, permitindo que tuplas de tamanhos diferentes sejam armazenad
 
 \begin{figure}[h]
 	\center
-	\includegraphics[width=.60\textwidth]{img/indice_invertido.png}
+	\includegraphics[width=.55\textwidth]{img/indice_invertido.png}
 	\caption{Índice invertido}
 	\label{fig:indiceinvertido}
 \end{figure}
 
 \begin{figure}[h]
 	\center
-	\includegraphics[width=.75\textwidth]{img/indice_tuplas.png}
+	\includegraphics[width=.8\textwidth]{img/indice_tuplas.png}
 	\caption{Índice separado por aridade das tuplas}
 	\label{fig:indicetuplas}
 \end{figure}
@@ -204,7 +204,7 @@ Um diagrama geral da solução pode ser visto na figura~\ref{fig:diagrama_geral}
 
 \begin{figure}[h]
 	\center
-	\includegraphics[width=.85\textwidth]{img/arquitetura.png}
+	\includegraphics[width=.8\textwidth]{img/arquitetura.png}
 	\caption{Visão geral da arquitetura implementada para a aplicação de testes}
 	\label{fig:diagrama_geral}
 \end{figure}
@@ -226,7 +226,7 @@ O intervalo do eixo $x$ de onde se deseja a integral é dividido partes de tamanh
 
 \begin{figure}[h]
 	\center
-	\includegraphics[width=.85\textwidth]{img/integral.png}
+	\includegraphics[width=.75\textwidth]{img/integral.png}
 	\caption{Aproximação da integral pela soma de Riemann}
 	\label{fig:riemann}
 \end{figure}
@@ -263,7 +263,7 @@ Na figura~\ref{fig:performance_gorotinas} temos uma visualização da tabela apres
 
 \begin{figure}[h]
 	\center
-	\includegraphics[width=.8\textwidth]{img/performance2.png}
+	\includegraphics[width=\textwidth]{img/performance2.png}
 	\caption{Tempo de resposta obtido para cada número de requisições enviadas}
 	\label{fig:performance_gorotinas}
 \end{figure}
@@ -274,9 +274,9 @@ Portanto, sem mais núcleos para distribuir o trabalho de maneira realmente paral
 Na figura~\ref{fig:performance_partes} temos uma visualização centrada no aumento do número de partes em que a integral foi dividida.
 Cada parte é enviada como uma requisição diferente para o Espaço de Tuplas, a ser executada por alguma gorotina de algum objeto servidor.
 
-\begin{figure}[h]
+\begin{figure}[h!]
 	\center
-	\includegraphics[width=.8\textwidth]{img/performance1.png}
+	\includegraphics[width=\textwidth]{img/performance1.png}
 	\caption{Tempo de resposta obtido para cada número de servidores simultâneos}
 	\label{fig:performance_partes}
 \end{figure}
@@ -287,7 +287,15 @@ Porém, o aumento do número de requisições no Espaço de Tuplas, e o consequente a
 \section{Conclusão}
 \label{sec:conclusao}
 
-Conclusão
+O conceito de Espaço de Tuplas apresenta vantagens para a comunicação distribuída entre processos por suas características de desacoplamento e permitir que os comunicantes sequer se conheçam.
+Este trabalho apresenta uma implementação de Espaço de Tuplas baseada que provê as primitivas básicas de \emph{write()}, \emph{read()} e \emph{take()}, fazendo o casamento de tuplas baseado na especificação da tecnologia JavaSpaces.
+Além disso, a implementação apresentada possui algumas estruturas internas de indexação de tuplas para diminuir o espaço de busca e consequêntemente reduzir o tempo de resposta, principalmente para leituras.
+
+Uma aplicação de exemplo foi implementada, que permite a execução remota de funções entre clientes e servidores totalmente desacoplados e que nem mesmo se conhecem.
+Para testar esta aplicação, a aproximação de integral por soma de Riemann foi utilizada.
+
+Os resultados mostram um ganho significativo no tempo de resposta quando mais servidores simultâneos executam as requisições de forma paralela.
+Porém quanto maior o número de requisições enviadas ao Espaço de Tuplas, o overhead causado tanto pelas operações de escrita quanto pelas operações de leitura gera uma degradação no tempo total de execução.
 
 \bibliographystyle{sbc}
 \bibliography{sbc-template}
