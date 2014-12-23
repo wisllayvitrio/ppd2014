@@ -10,6 +10,7 @@
 
 \usepackage{listings}
 \usepackage{xcolor}
+\usepackage{slashbox}
 
 \lstdefinestyle{customc++}{
   belowcaptionskip=1\baselineskip,
@@ -43,11 +44,15 @@
 \maketitle
 
 \begin{abstract}
-Abstract. Abstract. Abstract. Abstract. Abstract. Abstract. Abstract. Abstract. Abstract. Abstract.
+In this work a Tuple Space implementation in Go is presented, allowing simultaneous accesss from many proccesses, reading and writing tuples with values of any type.
+The implementation was tested using an example that explores parallelism.
+With the increase in the number of servers, a speedup increase was achieved.
 \end{abstract}
      
 \begin{resumo}
-Neste trabalho é apresentada uma implementação do espaço de tuplas em Go, permitindo que vários processos o acessem simultaneamente, realizando leituras e escritas de tuplas com valores de qualquer tipo. A implemnetação foi testada utilizando um exemplo que explora paralelismo. Ganhos de speedup foram obtidos com o aumento no número de servidores.  
+Neste trabalho é apresentada uma implementação do espaço de tuplas em Go, permitindo que vários processos o acessem simultaneamente, realizando leituras e escritas de tuplas com valores de qualquer tipo.
+A implemnetação foi testada utilizando um exemplo que explora paralelismo.
+Ganhos de \emph{speedup} foram obtidos com o aumento no número de servidores.  
 \end{resumo}
 
 \section{Introdução}
@@ -66,6 +71,14 @@ Várias linguagens têm implementações de espaço de tuplas, sendo a especificação 
 Como parte da tecnologia Jini, JavaSpaces é utilizado em serviços de finanças e telecomunicações para alcançar escalabilidade utilizando processamento paralelo.
 Por outro lado, a tecnologia Jini como um todo não é sucesso comercial, e o JavaSpaces não é amplamente utilizado.
 % web:javaspaces https://river.apache.org/doc/specs/html/js-spec.html
+
+Este trabalho apresenta uma implementação e avaliação do conceito de Espaço de Tuplas na linguagem Go, juntamente da apresentação de um possível cenário de uso que se aproveita das vantagens providas.
+Diferentemente do que é percebido em outras implementações, o Espaço de Tuplas apresentado neste trabalho utiliza estruturas de dados extras para melhorar o tempo de resposta quando as tuplas são acessadas, tanto para leitura quanto para escrita.
+
+O restante deste artigo é apresentado como se segue:
+Na sessão~\ref{sec:implementacao} a implementação do Espaço de Tuplas e de outros módulos envolvidos é detalhada.
+Na sessão~\ref{sec:testes} são discutidas a aplicação, o ambiente e a metodologia utilizada durante os testes.
+A sessão~\ref{sec:resultados} apresenta e discute os resultados obtidos, e finalmente a sessão~\ref{sec:conclusao} apresenta as conclusões finais.
 
 \section{O Espaço de Tuplas}
 \label{sec:tuplespace}
@@ -105,7 +118,6 @@ múltiplas cópias da mesma tupla no espaço de tuplas.
 
 \subsection{Acesso Paralelo}
 
-
 \begin{figure}[h]
 	\center
 	\includegraphics[width=.85\textwidth]{img/integral.png}
@@ -113,6 +125,50 @@ múltiplas cópias da mesma tupla no espaço de tuplas.
 	\label{fig:ql_exec}
 \end{figure}
 
+\section{Testes}
+\label{sec:testes}
+
+Um cenário de uso em que pode-se utilizar o Espaço de Tuplas de modo vantajoso é o padrão de projeto Mestre-Escravo.
+O desacoplamento total entre as partes, provido pela comunicação assíncrona utilizando o Espaço de Tuplas, permite que os mestres e escravos não saibam da localização, ou até mesmo da existência uns dos outros.
+
+\subsection{Aplicação}
+\label{sec:aplicacao}
+
+No escopo deste trabalho, a fim de testar o Espaço de Tuplas, foi implementada uma aplicação para que servidores disponibilizem algumas de suas funções remotamente para que clientes possam utilizar seu poder de processamento.
+Um diagrama geral da solução pode ser visto na figura~\ref{img:diagrama_geral}
+
+A aplicação consiste de um módulo \emph{``Middleware''}, presente tanto nos servidores quanto nos clientes, que trabalha como interface para a comunicação com o Espaço de Tuplas.
+Este módulo apresenta para seus usuários uma interface mais específica de Requisição-Resposta, e permite ainda que objetos servidores (chamados ``serviços'') se disponibilizem à ``trabalhar'' para algum cliente.
+
+Serviço é uma interface do \emph{Middleware} implementada por objetos que desejam disponibilizar suas funções para execução ao haver a requisição de clientes.
+Já os clientes possuem \emph{``Stubs''}, que tem definições de funções parecidas com as do seu serviço correspondente, mas ao invés de executarem estas funções, enviam requisições, por meio do \emph{Middleware}, aos objetos servidores, para que estes as executem.
+
+Por simplicidade, assume-se que tanto os servidores quanto os clientes sabem a localização do Espaço de Tuplas, já que ele disponibiliza a sua interface como serviços RPC.
+Assume-se também que os \emph{``Stubs''} e Serviços são definidos previamente e ambos sabem a definição das chamadas correspondentes no outro módulo, assim como o formato e a ordem de dados esperada, tanto para as requisições quanto para as respostas.
+
+\subsection{Configurações}
+\label{sec:configuracoes}
+
+Ambiente de testes
+
+\subsection{Metodologia}
+\label{sec:metodologia}
+
+Casos de teste: 8, 16, 32, 64 e 128 partes, 1, 2, 4 e 8 gorotinas no servidor
+
+\begin{table}[h]
+	\caption{Tempo de execução em segundos (média e desvio padrão)}
+	\label{tab:tempo_de_execucao}
+	\begin{tabular}{|c|c|c|c|c|}
+	\hline
+	\backslashbox{Partes}{Servidores}	& 1 & 2 & 4 & 8 \\ \hline
+	8   & $19,59 \pm 0,49$ & $10,26 \pm 0,37$ & $6,97 \pm 0,50$ & $6,41 \pm 0,23$ \\ \hline
+	16  & $21,81 \pm 0,28$ & $11,32 \pm 0,33$ & $7,29 \pm 0,27$ & $6,98 \pm 0,48$ \\ \hline
+	32  & $26,72 \pm 0,76$ & $14,35 \pm 1,02$ & $8,54 \pm 0,62$ & $6,93 \pm 0,47$ \\ \hline
+	64  & $36,04 \pm 0,53$ & $20,60 \pm 1,63$ & $12,07 \pm 2,61$ & $11,04 \pm 1,53$ \\ \hline
+	128 & $59,55 \pm 2,16$ & $31,60 \pm 1,06$ & $20,60 \pm 2,97$ & $21,97 \pm 2,29$ \\ \hline
+	\end{tabular}
+\end{table}
 
 \begin{figure}[h]
 	\center
@@ -141,9 +197,6 @@ múltiplas cópias da mesma tupla no espaço de tuplas.
 	\caption{Variação de recebimento durante a execução do algoritmo QL}
 	\label{fig:ql_exec}
 \end{figure}
-
-\section{Caso de teste}
-\label{sec:caso_de_teste}
 
 \section{Resultados}
 \label{sec:resultados}
