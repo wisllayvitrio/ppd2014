@@ -171,7 +171,15 @@ o identificador aos dados utilizando uma tabela hash padrão da linguagem Go.
 O espaço de tuplas também implementa o conceito de leituras com \emph{timeout}. 
 Quando um \emph{timeout} é configurado em uma operação, uma tupla que corresponde ao
 template é procurada no espaço de tuplas, e caso não seja encontrada nehuma, a 
-requisição é alocada a uma fila de espera. Desse modo, quando uma operação \emph{write} é realizada, a tupla a ser inserida deve primeiramente ser testada contra cada requisição na fila de espera ... continue
+requisição é alocada a uma fila de espera. Desse modo, quando uma operação 
+\emph{write} é realizada, a tupla a ser inserida deve primeiramente ser testada 
+contra cada requisição na fila de espera para evitar que uma nova requisição tome a
+frente de uma que esteja a espera. Essa busca na fila de espera é necessária para
+que requisições do tipo \emph{take()} sejam tratadas corretamente.
+
+Para imeplementar o sistema de \emph{timeout}, cada requisição de leitura em espera
+é associada a um \emph{channel} Go, através do qual uma tupla pode ser adicionada
+quando disponível. Assim é esperado uma tupla que combina com o template, ou um aviso de \emph{timeout}, o que ocorrer primeiro. Isso garante que 
 
 \section{Testes}
 \label{sec:testes}
