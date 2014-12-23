@@ -44,11 +44,15 @@
 \maketitle
 
 \begin{abstract}
-Abstract. Abstract. Abstract. Abstract. Abstract. Abstract. Abstract. Abstract. Abstract. Abstract.
+In this work a Tuple Space implementation in Go is presented, allowing simultaneous accesss from many proccesses, reading and writing tuples with values of any type.
+The implementation was tested using an example that explores parallelism.
+With the increase in the number of servers, a speedup increase was achieved.
 \end{abstract}
      
 \begin{resumo}
-Resumo. Resumo. Resumo. Resumo. Resumo. Resumo. Resumo. Resumo. Resumo. Resumo. Resumo. Resumo.
+Neste trabalho é apresentada uma implementação do espaço de tuplas em Go, permitindo que vários processos o acessem simultaneamente, realizando leituras e escritas de tuplas com valores de qualquer tipo.
+A implemnetação foi testada utilizando um exemplo que explora paralelismo.
+Ganhos de \emph{speedup} foram obtidos com o aumento no número de servidores.  
 \end{resumo}
 
 \section{Introdução}
@@ -58,7 +62,7 @@ Espaço de tuplas é um conceito de memória associativa para computação distribuíd
 Desenolvido por David Gelernter na Universidade de Yale, teve sua primeira implementação na linguagem de coordenação ``Linda'' (homenagem a uma atriz pornô de nome Linda Lovelace, assim como o nome da linguagem ``Ada'' é uma homenagem à Ada Lovelace~\cite{web:name_linda}).
 % web:name_linda http://www.nytimes.com/1992/01/19/business/david-gelernter-s-romance-with-linda.html
 
-Provê um repositório de tuplas que pode ser acessado concorrentemente por zero ou mais processos.
+O espaço de tuplas provê um repositório de tuplas que pode ser acessado concorrentemente por zero ou mais processos.
 Por ser baseado em memória associativa, as tuplas são acessadas por seu conteúdo e não por endereços.
 As tuplas não estão ligadas à nenhum processo, e qualquer um deles pode inserir, ler ou remover tuplas.
 Este desacoplamento total entre as partes integrantes do sistema provido pelo espaço de tuplas é sua principal vantagem.
@@ -76,49 +80,42 @@ Na sessão~\ref{sec:implementacao} a implementação do Espaço de Tuplas e de outro
 Na sessão~\ref{sec:testes} são discutidas a aplicação, o ambiente e a metodologia utilizada durante os testes.
 A sessão~\ref{sec:resultados} apresenta e discute os resultados obtidos, e finalmente a sessão~\ref{sec:conclusao} apresenta as conclusões finais.
 
-\section{Implementação}
-\label{sec:implementacao}
+\section{O Espaço de Tuplas}
+\label{sec:tuplespace}
 
-Implementação
+Como foi descrito na seção \ref{sec:introducao}, o espaço de tuplas permite que
+processos se comuniquem sem o conhecimento um do outro, local ou remotamente, 
+inserindo e removendo objetos representados por tuplas de valores.
+Para realizar o acesso aos dados do espaço de
+tuplas, o paradigma oferece três primitivas: \emph{read()}, \emph{take()} e 
+\emph{write()}. Esta seção explica o funcionamento de cada uma dessas primitivas e
+como foram implementadas levando em consideração as decisões arquiteturais tomadas.
 
-\begin{lstlisting}[style=customc++]
-// Stops retransmission attempts on remote station manager (RTS/CTS and Data)
-Config::SetDefault("ns3::WifiRemoteStationManager::MaxSsrc",UintegerValue(0));
-Config::SetDefault("ns3::WifiRemoteStationManager::MaxSlrc",UintegerValue(0));
-\end{lstlisting}
+\subsection{Primitivas}
+\label{sec:primitivas}
 
+Um dos exemplos de implementação do espaço de tuplas é o JavaSpaces \cite{?}, que foi 
+uma solução em Java para o espaço de tuplas. Nele as tuplas são armazenadas como uma 
+sequência de valores primitivos \emph(int, double, String, etc.) através da primitiva
+\emph{write()}. E os valores são lidos passando-se um \emph{template}, que representa
+a tupla procurada. A estrutura do template é a mesma da tupla, e serve como filtro 
+para as primitivas \emph{read()} e \emph{take()}. Essas primitivas retornam uma tupla 
+que combine com o template passado como parâmetro. No caso do JavaSpaces, o template 
+é uma tupla, onde cada valor pode ser nulo, significando que qualquer valor é valido 
+para aquela posição da tupla ou um valor específico, o qual deve combinar com a tupla  
+procurada.
 
-\begin{lstlisting}[style=customc++]
-// Create default PHY and Channel
-YansWifiChannelHelper chan = YansWifiChannelHelper::Default();
-YansWifiPhyHelper phy = YansWifiPhyHelper::Default();
-// Set channel
-phy.SetChannel(chan.Create());
-\end{lstlisting}
+Na solução de espaço de tuplas desenvolvida nesse trabalho, foi utilizada a
+linguagem Go \cite{?}, e seguimos o mesmo modelo  do JavaSpaces para a representação 
+das tuplas, para escrita e leitura, com a que aceitamos qualquer tipo de dado que 
+possa ser serializado como atributo de uma tupla. 
 
-\begin{lstlisting}[style=customc++]
-// Set Reception Gain to 0
-phy.Set("RxGain", DoubleValue(0));
-// Disable signal detection so the sending devices don't backoff
-phy.Set("EnergyDetectionThreshold", DoubleValue(0));
-// Stop the PHY layer from declaring 'CCA_BUSY'
-phy.Set("CcaMode1Threshold", DoubleValue(0));
-\end{lstlisting}
-
-
-\begin{lstlisting}[style=customc++]
-// Create and setup mobility
-MobilityHelper mob;
-mob.SetPositionAllocator("ns3::GridPositionAllocator",
-	"MinX", DoubleValue(0),
-	"MinY", DoubleValue(0),
-	"DeltaX", DoubleValue(gridDeltaX),
-	"DeltaY", DoubleValue(gridDeltaY),
-	"GridWidth", UintegerValue(gridWidth),
-	"LayoutType", StringValue("RowFirst"));
-mob.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
-	"Bounds", RectangleValue(Rectangle(-walkX, walkX, -walkY, walkY)));
-\end{lstlisting}
+\begin{figure}[h]
+	\center
+	\includegraphics[width=.85\textwidth]{img/integral.png}
+	\caption{Variação de recebimento durante a execução do algoritmo QL}
+	\label{fig:ql_exec}
+\end{figure}
 
 \section{Testes}
 \label{sec:testes}
@@ -151,11 +148,6 @@ Ambiente de testes
 
 Casos de teste: 8, 16, 32, 64 e 128 partes, 1, 2, 4 e 8 gorotinas no servidor
 
-\section{Resultados}
-\label{sec:resultados}
-
-Resultados
-
 \begin{table}[h]
 	\caption{Tempo de execução em segundos (média e desvio padrão)}
 	\label{tab:tempo_de_execucao}
@@ -172,17 +164,36 @@ Resultados
 
 \begin{figure}[h]
 	\center
-	\includegraphics[width=.85\textwidth]{img/ql_exec_color.png}
+	\includegraphics[width=.85\textwidth]{img/performance1.png}
 	\caption{Variação de recebimento durante a execução do algoritmo QL}
 	\label{fig:ql_exec}
 \end{figure}
 
 \begin{figure}[h]
 	\center
-	\includegraphics[width=.85\textwidth]{img/es_exec_color.png}
-	\caption{Variação de recebimento durante a execução do algoritmo ES}
-	\label{fig:es_exec}
+	\includegraphics[width=.85\textwidth]{img/performance2.png}
+	\caption{Variação de recebimento durante a execução do algoritmo QL}
+	\label{fig:ql_exec}
 \end{figure}
+
+\begin{figure}[h]
+	\center
+	\includegraphics[width=.85\textwidth]{img/indice_invertido.png}
+	\caption{Variação de recebimento durante a execução do algoritmo QL}
+	\label{fig:ql_exec}
+\end{figure}
+
+\begin{figure}[h]
+	\center
+	\includegraphics[width=.85\textwidth]{img/indice_tuplas.png}
+	\caption{Variação de recebimento durante a execução do algoritmo QL}
+	\label{fig:ql_exec}
+\end{figure}
+
+\section{Resultados}
+\label{sec:resultados}
+
+Resultados
 
 \section{Conclusão}
 \label{sec:conclusao}
