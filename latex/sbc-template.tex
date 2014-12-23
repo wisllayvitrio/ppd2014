@@ -95,7 +95,15 @@ procurada.
 Na solução de espaço de tuplas desenvolvida nesse trabalho, foi utilizada a
 linguagem Go \cite{?}, e seguimos o mesmo modelo  do JavaSpaces para a representação 
 das tuplas, para escrita e leitura, com a que aceitamos qualquer tipo de dado que 
-possa ser serializado como atributo de uma tupla. 
+possa ser serializado como atributo de uma tupla. A consulta também é realizada sobre 
+templates, utilizando o mesmo conceto do JavaSpaces. Um \emph{read()} ou 
+procura por uma tupla que combine com o template e a retorna. Uma chamada ao método 
+\emph{take()} também procura por uma tupla, mas a remove do espaço de tuplas, quando 
+encontrada. Durante uma operação de \emph{write()}, uma nova tupla é criada, mesmo 
+que uma tupla de mesmo valor já tenha sido inserida anteriormente, permitindo 
+múltiplas cópias da mesma tupla no espaço de tuplas.
+
+\subsection{Acesso Paralelo}
 
 
 \begin{figure}[h]
