@@ -28,7 +28,7 @@
      
 \sloppy
 
-\title{TODO: Title}
+\title{GoSpaces: Uma imeplementação do Espaço de Tuplas em Go}
 
 \author{Matheus B. Nascimento\inst{1},
 		Wisllay Vitrio\inst{1}
@@ -70,7 +70,7 @@ Várias linguagens têm implementações de espaço de tuplas, sendo a especificação 
 Como parte da tecnologia Jini, JavaSpaces é utilizado em serviços de finanças e telecomunicações para alcançar escalabilidade utilizando processamento paralelo.
 Por outro lado, a tecnologia Jini como um todo não é sucesso comercial, e o JavaSpaces não é amplamente utilizado.
 
-Este trabalho apresenta uma implementação e avaliação do conceito de Espaço de Tuplas na linguagem Go~~\cite{web:go}, juntamente da apresentação de um possível cenário de uso que se aproveita das vantagens providas.
+Este trabalho apresenta uma implementação e avaliação do conceito de Espaço de Tuplas na linguagem Go~\cite{web:go}, juntamente da apresentação de um possível cenário de uso que se aproveita das vantagens providas.
 Diferentemente do que é percebido em outras implementações, o Espaço de Tuplas apresentado neste trabalho utiliza estruturas de dados extras para melhorar o tempo de resposta quando as tuplas são acessadas, tanto para leitura quanto para escrita.
 
 O restante deste artigo é apresentado como se segue:
@@ -112,11 +112,66 @@ procura por uma tupla que combine com o template e a retorna. Uma chamada ao mét
 \emph{take()} também procura por uma tupla, mas a remove do espaço de tuplas, quando 
 encontrada. Durante uma operação de \emph{write()}, uma nova tupla é criada, mesmo 
 que uma tupla de mesmo valor já tenha sido inserida anteriormente, permitindo 
-múltiplas cópias da mesma tupla no espaço de tuplas.
+múltiplas cópias da mesma tupla no espaço de tuplas. 
 
 \subsection{Acesso Paralelo}
+\label{sec:acesso_paralelo}
 
+Para um espaço de tuplas ser útil, é necessário que permita acessos de
+modo simultâneo e eficientemente. Para garantir isso, a implementação proposta levou
+em consideração as seguintes decisões arquiteturais.
 
+\begin{enumerate}
+	\item Leituras devem encontrar uma tupla que corresponde ao template de modo 
+	eficiente
+	\item Escritas não podem ocorrer simultâneamente com leituras e vice-versa
+\end{enumerate}
+
+A primeira decisão levou a criação de um sistema de índices invertidos que permitem
+encontrar tuplas rapidamente a partir de templates. Primeiramente, cada tupla é
+inserida no espaço de tuplas é associada a um identificador único. Esse identificador
+é utilizado para inserir referências a tupla nos índices invertidos associados a
+cada atributo contido na tupla. Cada índice mantém uma lista de identificadores para 
+cada valor presente no espaço de tuplas, como na figura \ref{fig:indiceinvertido}.
+Isso permite que os casamentos por template sejam realizados rapidamente, bastando 
+realizar a interseção daslistas de identificadores relacionados a cada atributo não
+nulo contido na consulta. Outro nível de índice foi desenvolvido para separar as
+tuplas por paridade, permitindo que tuplas de tamanhos diferentes sejam armazenadas em 
+índices diferentes, reduzindo ainda mais o espaço de busca, como ilustrado na figura 
+\ref{fig:indicetuplas}
+
+\begin{figure}[h]
+	\center
+	\includegraphics[width=.60\textwidth]{img/indice_invertido.png}
+	\caption{Índice invertido}
+	\label{fig:indiceinvertido}
+\end{figure}
+
+\begin{figure}[h]
+	\center
+	\includegraphics[width=.75\textwidth]{img/indice_tuplas.png}
+	\caption{Índice separado por paridade das tuplas}
+	\label{fig:indicetuplas}
+\end{figure}
+
+Como consequência do sistema de indexação, uma operação de escrita deve atualizar 
+vários indices para uma única tupla, dificultando a imeplementação de um sistema que
+permita escritas e leituras concorrentemente. Sendo assim, a segunda decisão 
+arquitetural fez com que o espaço de tuplas execute apenas uma operação por vez 
+quando uma escrita ocorre. Isso degrada a eficiência do espaço de tuplas quando 
+muitas escritas são realizadas, ao custo de operações de leitura rápidas.
+
+Para garantir que as operações de \emph{take()} não bloqueiem todo o espaço de 
+tuplas, estas são executadas como de leitura, assim como as chamadas \emph{read()}.
+Porém, quando uma tupla é encontrada, esta é removida do índice central, que associa
+o identificador aos dados utilizando uma tabela hash padrão da linguagem Go.
+
+\subsection{Chamadas Assincronas}
+
+O espaço de tuplas também implementa o conceito de leituras com \emph{timeout}. 
+Quando um \emph{timeout} é configurado em uma operação, uma tupla que corresponde ao
+template é procurada no espaço de tuplas, e caso não seja encontrada nehuma, a 
+requisição é alocada a uma fila de espera. Desse modo, quando uma operação \emph{write} é realizada, a tupla a ser inserida deve primeiramente ser testada contra cada requisição na fila de espera ... continue
 
 \section{Testes}
 \label{sec:testes}
@@ -180,28 +235,14 @@ Casos de teste: 8, 16, 32, 64 e 128 partes, 1, 2, 4 e 8 gorotinas no servidor
 
 \begin{figure}[h]
 	\center
-	\includegraphics[width=.85\textwidth]{img/performance1.png}
+	\includegraphics[width=.75\textwidth]{img/performance1.png}
 	\caption{Variação de recebimento durante a execução do algoritmo QL}
 	\label{fig:ql_exec}
 \end{figure}
 
 \begin{figure}[h]
 	\center
-	\includegraphics[width=.85\textwidth]{img/performance2.png}
-	\caption{Variação de recebimento durante a execução do algoritmo QL}
-	\label{fig:ql_exec}
-\end{figure}
-
-\begin{figure}[h]
-	\center
-	\includegraphics[width=.85\textwidth]{img/indice_invertido.png}
-	\caption{Variação de recebimento durante a execução do algoritmo QL}
-	\label{fig:ql_exec}
-\end{figure}
-
-\begin{figure}[h]
-	\center
-	\includegraphics[width=.85\textwidth]{img/indice_tuplas.png}
+	\includegraphics[width=.75\textwidth]{img/performance2.png}
 	\caption{Variação de recebimento durante a execução do algoritmo QL}
 	\label{fig:ql_exec}
 \end{figure}
