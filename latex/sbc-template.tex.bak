@@ -134,6 +134,45 @@ possa ser serializado como atributo de uma tupla.
 	\label{fig:ql_exec}
 \end{figure}
 
+\begin{lstlisting}[style=customc++]
+// Stops retransmission attempts on remote station manager (RTS/CTS and Data)
+Config::SetDefault("ns3::WifiRemoteStationManager::MaxSsrc",UintegerValue(0));
+Config::SetDefault("ns3::WifiRemoteStationManager::MaxSlrc",UintegerValue(0));
+\end{lstlisting}
+
+
+\begin{lstlisting}[style=customc++]
+// Create default PHY and Channel
+YansWifiChannelHelper chan = YansWifiChannelHelper::Default();
+YansWifiPhyHelper phy = YansWifiPhyHelper::Default();
+// Set channel
+phy.SetChannel(chan.Create());
+\end{lstlisting}
+
+\begin{lstlisting}[style=customc++]
+// Set Reception Gain to 0
+phy.Set("RxGain", DoubleValue(0));
+// Disable signal detection so the sending devices don't backoff
+phy.Set("EnergyDetectionThreshold", DoubleValue(0));
+// Stop the PHY layer from declaring 'CCA_BUSY'
+phy.Set("CcaMode1Threshold", DoubleValue(0));
+\end{lstlisting}
+
+
+\begin{lstlisting}[style=customc++]
+// Create and setup mobility
+MobilityHelper mob;
+mob.SetPositionAllocator("ns3::GridPositionAllocator",
+	"MinX", DoubleValue(0),
+	"MinY", DoubleValue(0),
+	"DeltaX", DoubleValue(gridDeltaX),
+	"DeltaY", DoubleValue(gridDeltaY),
+	"GridWidth", UintegerValue(gridWidth),
+	"LayoutType", StringValue("RowFirst"));
+mob.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
+	"Bounds", RectangleValue(Rectangle(-walkX, walkX, -walkY, walkY)));
+\end{lstlisting}
+
 \section{Caso de teste}
 \label{sec:caso_de_teste}
 
@@ -141,6 +180,30 @@ possa ser serializado como atributo de uma tupla.
 \label{sec:resultados}
 
 Resultados
+
+\begin{figure}[h]
+	\center
+	\includegraphics[width=.85\textwidth]{img/ql_exec_color.png}
+	\caption{Variação de recebimento durante a execução do algoritmo QL}
+	\label{fig:ql_exec}
+\end{figure}
+
+\begin{figure}[h]
+	\center
+	\includegraphics[width=.85\textwidth]{img/es_exec_color.png}
+	\caption{Variação de recebimento durante a execução do algoritmo ES}
+	\label{fig:es_exec}
+\end{figure}
+
+\begin{table}[h]
+\begin{tabular}{ccccc}
+Partes \textbackslash Servidores  & 1              & 2 & 4 & 8 \\
+8  & $19.59 \pm 0.49$ &   &   &   \\
+16 &                &   &   &   \\
+32 &                &   &   &   \\
+64 &                &   &   &  
+\end{tabular}
+\end{table}
 
 \section{Conclusão}
 \label{sec:conclusao}
