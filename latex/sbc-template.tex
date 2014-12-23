@@ -103,10 +103,12 @@ que combine com o template passado como parâmetro. No caso do JavaSpaces, o temp
 para aquela posição da tupla ou um valor específico, o qual deve combinar com a tupla  
 procurada.
 
-Na solução de espaço de tuplas desenvolvida nesse trabalho, foi utilizada a
-linguagem Go, e seguimos o mesmo modelo  do JavaSpaces para a representação 
-das tuplas, para escrita e leitura, com a que aceitamos qualquer tipo de dado que 
-possa ser serializado como atributo de uma tupla. A consulta também é realizada sobre 
+Na solução de espaço de tuplas desenvolvida nesse trabalho, a qual foi dada
+o nome de GoSpaces, foi utilizada a linguagem Go, e seguimos o mesmo modelo  do 
+JavaSpaces para a representação 
+das tuplas, para escrita e leitura, com a diferença de que qualquer tipo de dado que 
+possa ser serializado como atributo de uma tupla é aceito. A consulta também é 
+realizada sobre 
 templates, utilizando o mesmo conceto do JavaSpaces. Um \emph{read()} ou 
 procura por uma tupla que combine com o template e a retorna. Uma chamada ao método 
 \emph{take()} também procura por uma tupla, mas a remove do espaço de tuplas, quando 
@@ -118,8 +120,8 @@ múltiplas cópias da mesma tupla no espaço de tuplas.
 \label{sec:acesso_paralelo}
 
 Para um espaço de tuplas ser útil, é necessário que permita acessos de
-modo simultâneo e eficientemente. Para garantir isso, a implementação proposta levou
-em consideração as seguintes decisões arquiteturais.
+modo simultâneo e eficientemente. Para garantir isso, o GoSpaces leva em consideração
+as seguintes decisões arquiteturais.
 
 \begin{enumerate}
 	\item Leituras devem encontrar uma tupla que corresponde ao template de modo 
@@ -159,12 +161,15 @@ vários indices para uma única tupla, dificultando a imeplementação de um sistema
 permita escritas e leituras concorrentemente. Sendo assim, a segunda decisão 
 arquitetural fez com que o espaço de tuplas execute apenas uma operação por vez 
 quando uma escrita ocorre. Isso degrada a eficiência do espaço de tuplas quando 
-muitas escritas são realizadas, ao custo de operações de leitura rápidas.
+muitas escritas são realizadas, ao custo de operações de leitura rápidas e 
+simultâneas.
 
 Para garantir que as operações de \emph{take()} não bloqueiem todo o espaço de 
 tuplas, estas são executadas como de leitura, assim como as chamadas \emph{read()}.
-Porém, quando uma tupla é encontrada, esta é removida do índice central, que associa
-o identificador aos dados utilizando uma tabela hash padrão da linguagem Go.
+Porém, quando uma tupla é encontrada, esta é removida apenas do índice central, que 
+associa o identificador aos dados utilizando uma tabela hash padrão da linguagem Go.
+O proximo processo que tentar remover essa mesma tuplas a encontrará no índice, mas
+não conseguirá utilizá-la, pois já foi removida do índice central.
 
 \subsection{Chamadas Assincronas}
 
@@ -173,9 +178,11 @@ Quando um \emph{timeout} é configurado em uma operação, uma tupla que correspond
 template é procurada no espaço de tuplas, e caso não seja encontrada nehuma, a 
 requisição é alocada a uma fila de espera. Desse modo, quando uma operação 
 \emph{write} é realizada, a tupla a ser inserida deve primeiramente ser testada 
-contra cada requisição na fila de espera para evitar que uma nova requisição tome a
-frente de uma que esteja a espera. Essa busca na fila de espera é necessária para
-que requisições do tipo \emph{take()} sejam tratadas corretamente.
+contra cada requisição na fila de espera para evitar que uma nova requisição
+obtenha a tupla antes de uma que esteja a espera. Essa busca na fila de espera é 
+necessária para
+que requisições do tipo \emph{take()} sejam tratadas corretamente, pois a fila é 
+seguida por ordem de chegada.
 
 Para imeplementar o sistema de \emph{timeout}, cada requisição de leitura em espera
 é associada a um \emph{channel} Go, através do qual uma tupla pode ser adicionada
@@ -188,7 +195,10 @@ Cada tupla que é inserida no espaço de tuplas deve ter um tempo máximo que pode
 permanecer lá. Esse tampo é chamado de \emph{leasing}, e garante que, mesmo que 
 uma tupla nunca seja removida por um \emph{take()}, seu conteúdo seja descartado após 
 um período de tempo. Para realizar a limpeza das tuplas antigas, um coletor de lixo
-rudimentar percorre os índices em períodos regulares em busca de tuplas que tenham expirado o \emph{leasing}. 
+rudimentar percorre os índices em períodos regulares em busca de tuplas que tenham 
+expirado o \emph{leasing}. Com isso, as tuplas que não foram removidas dos índices 
+secundários após um \emph{take()} são limpas após um período de tempo, reduzindo
+o espaço ocupado pelos índices.
 
 \section{Testes}
 \label{sec:testes}
@@ -215,7 +225,7 @@ Este módulo apresenta para seus usuários uma interface mais específica de Requis
 Serviço é uma interface do \emph{Middleware} implementada por objetos que desejam disponibilizar suas funções para execução ao haver a requisição de clientes.
 Já os clientes possuem \emph{``Stubs''}, que tem definições de funções parecidas com as do seu serviço correspondente, mas ao invés de executarem estas funções, enviam requisições, por meio do \emph{Middleware}, aos objetos servidores, para que estes as executem.
 
-Por simplicidade, assume-se que tanto os servidores quanto os clientes sabem a localização do Espaço de Tuplas, já que ele disponibiliza a sua interface como serviços RPC.
+Por simplicidade, assume-se que tanto os servidores quanto os clientes sabem a localização do Espaço de Tuplas, já que este disponibiliza a sua interface como serviços RPC.
 Assume-se também que os \emph{``Stubs''} e Serviços são definidos previamente e ambos sabem a definição das chamadas correspondentes no outro módulo, assim como o formato e a ordem de dados esperada, tanto para as requisições quanto para as respostas.
 
 \subsection{Configurações}
@@ -231,14 +241,22 @@ O intervalo do eixo $x$ de onde se deseja a integral é dividido partes de tamanh
 	\label{fig:riemann}
 \end{figure}
 
-%TODO: Falar das máquinas utilizadas (Azure, etc)?
+Foram utilizadas uma máquina para o cliente que gera as requisições de integral, 
+uma máquina de 8 núcleos de processamento, para atuar como servidor, recebendo os 
+pedidos de cálculos de integral e realizando as somas de Riemann, e uma máquina
+virtual na plataforma Azure, da Microsoft, com dois núcleos, para atuar como espaço 
+de tuplas.
+
+Tanto clientes como servidores estavam localizados na mesma rede, mas a latência 
+destes para o espaço de tuplas era de aproximadamente 130ms. Com isso, foi possível
+notar como os tempos de comunicação influenciaram nos resultados dos testes. 
 
 \subsection{Metodologia}
 \label{sec:metodologia}
 
 Para cada caso de teste com parametrizações diferentes, a aproximação da integral foi realizada 30 vezes.
 Os casos de teste foram configurados com o cliente dividindo o cálculo da integral em 8, 16, 32, 64 e 128 partes diferentes (requisições enviadas pelo \emph{Middleware} para o Espaço de Tuplas).
-Para cada número de requisições, foram executados casos de teste diferentes com o servidor utilizando 1, 2, 4 e 8 gorotinas.
+Para cada número de requisições, foram executados casos de teste diferentes com o servidor utilizando 1, 2, 4 e 8 gorotinas, simulando múltiplos servidores.
 
 \section{Resultados}
 \label{sec:resultados}
@@ -282,7 +300,7 @@ Cada parte é enviada como uma requisição diferente para o Espaço de Tuplas, a se
 \end{figure}
 
 Percebe-se que o aumento do número de servidores disponíveis gera um aumento menor do tempo de execução.
-Porém, o aumento do número de requisições no Espaço de Tuplas, e o consequente aumento na quantidade de escrita de tuplas degrada consideravelmente o sistema, mesmo com o maior número de servidores testado.
+Porém, o aumento do número de requisições no Espaço de Tuplas, e o consequente aumento na quantidade de escrita de tuplas degrada consideravelmente o sistema, mesmo com o maior número de servidores utilizado.
 
 \section{Conclusão}
 \label{sec:conclusao}
