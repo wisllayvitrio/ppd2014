@@ -179,7 +179,16 @@ que requisições do tipo \emph{take()} sejam tratadas corretamente.
 
 Para imeplementar o sistema de \emph{timeout}, cada requisição de leitura em espera
 é associada a um \emph{channel} Go, através do qual uma tupla pode ser adicionada
-quando disponível. Assim é esperado uma tupla que combina com o template, ou um aviso de \emph{timeout}, o que ocorrer primeiro. Isso garante que 
+quando disponível. Assim é esperado uma tupla que combina com o template, ou um aviso 
+de \emph{timeout}, o que ocorrer primeiro.
+
+\subsection{\emph{Leasing}}
+
+Cada tupla que é inserida no espaço de tuplas deve ter um tempo máximo que pode 
+permanecer lá. Esse tampo é chamado de \emph{leasing}, e garante que, mesmo que 
+uma tupla nunca seja removida por um \emph{take()}, seu conteúdo seja descartado após 
+um período de tempo. Para realizar a limpeza das tuplas antigas, um coletor de lixo
+rudimentar percorre os índices em períodos regulares em busca de tuplas que tenham expirado o \emph{leasing}. 
 
 \section{Testes}
 \label{sec:testes}
