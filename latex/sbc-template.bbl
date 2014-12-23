@@ -1,3 +1,35 @@
 \begin{thebibliography}{}
 
+\bibitem[{Apache Software Foundation} ]{web:javaspaces}
+{Apache Software Foundation}.
+\newblock {JS - JavaSpaces\textsuperscript{TM}} service specification.
+\newblock \url{https://river.apache.org/doc/specs/html/js-spec.html}.
+\newblock Accessado: 2014-12-20.
+
+\bibitem[{Encyclopedia of Mathematics} ]{web:riemann}
+{Encyclopedia of Mathematics}.
+\newblock Riemann integral.
+\newblock
+  \url{http://www.encyclopediaofmath.org/index.php?title=Riemann_integral&oldid=29281}.
+\newblock Accessado: 2014-12-20.
+
+\bibitem[{Google Inc.} ]{web:go}
+{Google Inc.}
+\newblock The {Go} programming language.
+\newblock \url{http://golang.org/}.
+\newblock Accessado: 2014-12-20.
+
+\bibitem[Markoff 1992]{web:name_linda}
+Markoff, J. (1992).
+\newblock David gelernter's romance with linda.
+\newblock
+  \url{http://www.nytimes.com/1992/01/19/business/david-gelernter-s-romance-with-linda.html}.
+\newblock Accessado: 2014-12-20.
+
+\bibitem[{National Instruments} 2006]{web:master_slave}
+{National Instruments} (2006).
+\newblock Application design patterns: {Master/Slave}.
+\newblock \url{http://www.ni.com/white-paper/3022/en/}.
+\newblock Accessado: 2014-12-20.
+
 \end{thebibliography}

@@ -60,7 +60,6 @@ Ganhos de \emph{speedup} foram obtidos com o aumento no número de servidores.
 
 Espaço de tuplas é um conceito de memória associativa para computação distribuída/paralela.
 Desenolvido por David Gelernter na Universidade de Yale, teve sua primeira implementação na linguagem de coordenação ``Linda'' (homenagem a uma atriz pornô de nome Linda Lovelace, assim como o nome da linguagem ``Ada'' é uma homenagem à Ada Lovelace~\cite{web:name_linda}).
-% web:name_linda http://www.nytimes.com/1992/01/19/business/david-gelernter-s-romance-with-linda.html
 
 O espaço de tuplas provê um repositório de tuplas que pode ser acessado concorrentemente por zero ou mais processos.
 Por ser baseado em memória associativa, as tuplas são acessadas por seu conteúdo e não por endereços.
@@ -70,13 +69,12 @@ Este desacoplamento total entre as partes integrantes do sistema provido pelo es
 Várias linguagens têm implementações de espaço de tuplas, sendo a especificação para Java, JavaSpaces~\cite{web:javaspaces}, a mais famosa.
 Como parte da tecnologia Jini, JavaSpaces é utilizado em serviços de finanças e telecomunicações para alcançar escalabilidade utilizando processamento paralelo.
 Por outro lado, a tecnologia Jini como um todo não é sucesso comercial, e o JavaSpaces não é amplamente utilizado.
-% web:javaspaces https://river.apache.org/doc/specs/html/js-spec.html
 
-Este trabalho apresenta uma implementação e avaliação do conceito de Espaço de Tuplas na linguagem Go, juntamente da apresentação de um possível cenário de uso que se aproveita das vantagens providas.
+Este trabalho apresenta uma implementação e avaliação do conceito de Espaço de Tuplas na linguagem Go~~\cite{web:go}, juntamente da apresentação de um possível cenário de uso que se aproveita das vantagens providas.
 Diferentemente do que é percebido em outras implementações, o Espaço de Tuplas apresentado neste trabalho utiliza estruturas de dados extras para melhorar o tempo de resposta quando as tuplas são acessadas, tanto para leitura quanto para escrita.
 
 O restante deste artigo é apresentado como se segue:
-Na sessão~\ref{sec:implementacao} a implementação do Espaço de Tuplas e de outros módulos envolvidos é detalhada.
+Na sessão~\ref{sec:tuplespace} a implementação do Espaço de Tuplas e de outros módulos envolvidos é detalhada.
 Na sessão~\ref{sec:testes} são discutidas a aplicação, o ambiente e a metodologia utilizada durante os testes.
 A sessão~\ref{sec:resultados} apresenta e discute os resultados obtidos, e finalmente a sessão~\ref{sec:conclusao} apresenta as conclusões finais.
 
@@ -94,7 +92,7 @@ como foram implementadas levando em consideração as decisões arquiteturais tomad
 \subsection{Primitivas}
 \label{sec:primitivas}
 
-Um dos exemplos de implementação do espaço de tuplas é o JavaSpaces \cite{?}, que foi 
+Um dos exemplos de implementação do espaço de tuplas é o JavaSpaces, que foi 
 uma solução em Java para o espaço de tuplas. Nele as tuplas são armazenadas como uma 
 sequência de valores primitivos \emph(int, double, String, etc.) através da primitiva
 \emph{write()}. E os valores são lidos passando-se um \emph{template}, que representa
@@ -106,7 +104,7 @@ para aquela posição da tupla ou um valor específico, o qual deve combinar com a 
 procurada.
 
 Na solução de espaço de tuplas desenvolvida nesse trabalho, foi utilizada a
-linguagem Go \cite{?}, e seguimos o mesmo modelo  do JavaSpaces para a representação 
+linguagem Go, e seguimos o mesmo modelo  do JavaSpaces para a representação 
 das tuplas, para escrita e leitura, com a que aceitamos qualquer tipo de dado que 
 possa ser serializado como atributo de uma tupla. A consulta também é realizada sobre 
 templates, utilizando o mesmo conceto do JavaSpaces. Um \emph{read()} ou 
@@ -118,24 +116,26 @@ múltiplas cópias da mesma tupla no espaço de tuplas.
 
 \subsection{Acesso Paralelo}
 
-\begin{figure}[h]
-	\center
-	\includegraphics[width=.85\textwidth]{img/integral.png}
-	\caption{Variação de recebimento durante a execução do algoritmo QL}
-	\label{fig:ql_exec}
-\end{figure}
+
 
 \section{Testes}
 \label{sec:testes}
 
-Um cenário de uso em que pode-se utilizar o Espaço de Tuplas de modo vantajoso é o padrão de projeto Mestre-Escravo.
+Um cenário de uso em que pode-se utilizar o Espaço de Tuplas de modo vantajoso é o padrão de projeto Mestre-Escravo~\cite{web:master_slave}.
 O desacoplamento total entre as partes, provido pela comunicação assíncrona utilizando o Espaço de Tuplas, permite que os mestres e escravos não saibam da localização, ou até mesmo da existência uns dos outros.
 
 \subsection{Aplicação}
 \label{sec:aplicacao}
 
 No escopo deste trabalho, a fim de testar o Espaço de Tuplas, foi implementada uma aplicação para que servidores disponibilizem algumas de suas funções remotamente para que clientes possam utilizar seu poder de processamento.
-Um diagrama geral da solução pode ser visto na figura~\ref{img:diagrama_geral}
+Um diagrama geral da solução pode ser visto na figura~\ref{fig:diagrama_geral}
+
+\begin{figure}[h]
+	\center
+	\includegraphics[width=.85\textwidth]{img/arquitetura.png}
+	\caption{Visão geral da arquitetura implementada para a aplicação de testes}
+	\label{fig:diagrama_geral}
+\end{figure}
 
 A aplicação consiste de um módulo \emph{``Middleware''}, presente tanto nos servidores quanto nos clientes, que trabalha como interface para a comunicação com o Espaço de Tuplas.
 Este módulo apresenta para seus usuários uma interface mais específica de Requisição-Resposta, e permite ainda que objetos servidores (chamados ``serviços'') se disponibilizem à ``trabalhar'' para algum cliente.
@@ -149,7 +149,15 @@ Assume-se também que os \emph{``Stubs''} e Serviços são definidos previamente e 
 \subsection{Configurações}
 \label{sec:configuracoes}
 
-Ambiente de testes
+Para a realização dos testes, foi implementado um serviço que disponibiliza a aproximação da integral de uma função polinomial utilizando o método de soma de Riemann~\cite{web:riemann}.
+O intervalo do eixo $x$ de onde se deseja a integral é dividido partes de tamanho igual e é criada uma requisição para a execução da soma de Riemann para cada parte, como pode ser visto na figura~\ref{fig:riemann}.
+
+\begin{figure}[h]
+	\center
+	\includegraphics[width=.85\textwidth]{img/integral.png}
+	\caption{Aproximação da integral pela soma de Riemann}
+	\label{fig:riemann}
+\end{figure}
 
 \subsection{Metodologia}
 \label{sec:metodologia}
