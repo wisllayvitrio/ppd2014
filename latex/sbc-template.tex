@@ -136,7 +136,7 @@ cada valor presente no espaço de tuplas, como na figura \ref{fig:indiceinvertido
 Isso permite que os casamentos por template sejam realizados rapidamente, bastando 
 realizar a interseção daslistas de identificadores relacionados a cada atributo não
 nulo contido na consulta. Outro nível de índice foi desenvolvido para separar as
-tuplas por paridade, permitindo que tuplas de tamanhos diferentes sejam armazenadas em 
+tuplas por aridade, permitindo que tuplas de tamanhos diferentes sejam armazenadas em 
 índices diferentes, reduzindo ainda mais o espaço de busca, como ilustrado na figura 
 \ref{fig:indicetuplas}
 
@@ -150,7 +150,7 @@ tuplas por paridade, permitindo que tuplas de tamanhos diferentes sejam armazena
 \begin{figure}[h]
 	\center
 	\includegraphics[width=.75\textwidth]{img/indice_tuplas.png}
-	\caption{Índice separado por paridade das tuplas}
+	\caption{Índice separado por aridade das tuplas}
 	\label{fig:indicetuplas}
 \end{figure}
 
@@ -214,10 +214,19 @@ O intervalo do eixo $x$ de onde se deseja a integral é dividido partes de tamanh
 	\label{fig:riemann}
 \end{figure}
 
+%TODO: Falar das máquinas utilizadas (Azure, etc)?
+
 \subsection{Metodologia}
 \label{sec:metodologia}
 
-Casos de teste: 8, 16, 32, 64 e 128 partes, 1, 2, 4 e 8 gorotinas no servidor
+Para cada caso de teste com parametrizações diferentes, a aproximação da integral foi realizada 30 vezes.
+Os casos de teste foram configurados com o cliente dividindo o cálculo da integral em 8, 16, 32, 64 e 128 partes diferentes (requisições enviadas pelo \emph{Middleware} para o Espaço de Tuplas).
+Para cada número de requisições, foram executados casos de teste diferentes com o servidor utilizando 1, 2, 4 e 8 gorotinas.
+
+\section{Resultados}
+\label{sec:resultados}
+
+As médias dos tempos de execução e os devios padrão das 30 execuções, medidos no cliente, podem ser observado para as configurações de cada caso de teste na tablea~\ref{tab:tempo_de_execucao}.
 
 \begin{table}[h]
 	\caption{Tempo de execução em segundos (média e desvio padrão)}
@@ -233,24 +242,30 @@ Casos de teste: 8, 16, 32, 64 e 128 partes, 1, 2, 4 e 8 gorotinas no servidor
 	\end{tabular}
 \end{table}
 
-\begin{figure}[h]
-	\center
-	\includegraphics[width=.75\textwidth]{img/performance1.png}
-	\caption{Variação de recebimento durante a execução do algoritmo QL}
-	\label{fig:ql_exec}
-\end{figure}
+Na figura~\ref{fig:performance_gorotinas} temos uma visualização da tabela apresentada, mostrando para cada número de divisões do cálculo da integral, qual o tempo de resposta obtido aumentando-se o número de gorotinas disponíveis para execução simultânea das requisições no servidor.
 
 \begin{figure}[h]
 	\center
-	\includegraphics[width=.75\textwidth]{img/performance2.png}
-	\caption{Variação de recebimento durante a execução do algoritmo QL}
-	\label{fig:ql_exec}
+	\includegraphics[width=.8\textwidth]{img/performance2.png}
+	\caption{Tempo de resposta obtido para cada número de requisições enviadas}
+	\label{fig:performance_gorotinas}
 \end{figure}
 
-\section{Resultados}
-\label{sec:resultados}
+Pode-se perceber ganhos com a paralelização, principalmente até 4 gorotinas, pois a máquina utilizada para testes possui 4 núcleos reais (8 núcleos lógicos por \emph{hyperthreading}).
+Portanto, sem mais núcleos para distribuir o trabalho de maneira realmente paralela, os ganhos entre 4 e 8 gorotinas são pequenos.
 
-Resultados
+Na figura~\ref{fig:performance_partes} temos uma visualização centrada no aumento do número de partes em que a integral foi dividida.
+Cada parte é enviada como uma requisição diferente para o Espaço de Tuplas, a ser executada por alguma gorotina de algum objeto servidor.
+
+\begin{figure}[h]
+	\center
+	\includegraphics[width=.8\textwidth]{img/performance1.png}
+	\caption{Tempo de resposta obtido para cada número de servidores simultâneos}
+	\label{fig:performance_partes}
+\end{figure}
+
+Percebe-se que o aumento do número de servidores disponíveis gera um aumento menor do tempo de execução.
+Porém, o aumento do número de requisições no Espaço de Tuplas, e o consequente aumento na quantidade de escrita de tuplas degrada consideravelmente o sistema, mesmo com o maior número de servidores testado.
 
 \section{Conclusão}
 \label{sec:conclusao}
